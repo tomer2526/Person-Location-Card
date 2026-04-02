@@ -82,6 +82,8 @@ class PersonRoomCard extends HTMLElement {
       .icon ha-icon {
         width: 42px;
         height: 42px;
+        --mdc-icon-size: 42px;
+        --ha-icon-size: 42px;
       }
       .name {
         font-size: 18px;
