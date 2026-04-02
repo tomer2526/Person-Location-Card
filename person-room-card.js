@@ -104,6 +104,12 @@ class PersonRoomCard extends HTMLElement {
         height: 12px;
         border-radius: 50%;
         background: rgba(0, 0, 0, 0.25);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        font-weight: 700;
+        color: var(--primary-text-color);
       }
       .clickable {
         cursor: pointer;
@@ -176,13 +182,27 @@ class PersonRoomCard extends HTMLElement {
 
     if (gps_entity) {
       const tracker = this._hass.states[gps_entity];
-      const isHome = tracker && tracker.state === "home";
-      const tooltip = isHome ? "הטלפון בבית לפי GPS" : "הטלפון לא בבית לפי GPS";
-      this._elements.statusDot.style.background = isHome
-        ? "limegreen"
-        : "rgba(0,0,0,0.25)";
-      this._elements.statusDot.setAttribute("title", tooltip);
-      this._elements.statusDot.style.display = "block";
+      const state = tracker?.state;
+      const isUnavailable =
+        !tracker || state === "unknown" || state === "unavailable";
+      const isHome = !isUnavailable && state === "home";
+
+      if (isUnavailable) {
+        this._elements.statusDot.style.background = "rgba(0,0,0,0.25)";
+        this._elements.statusDot.textContent = "?";
+        this._elements.statusDot.setAttribute("title", "מצב GPS לא זמין");
+      } else {
+        this._elements.statusDot.textContent = "";
+        this._elements.statusDot.style.background = isHome
+          ? "limegreen"
+          : "var(--warning-color, orange)";
+        this._elements.statusDot.setAttribute(
+          "title",
+          isHome ? "הטלפון בבית לפי GPS" : "הטלפון לא בבית לפי GPS"
+        );
+      }
+
+      this._elements.statusDot.style.display = "flex";
     } else {
       this._elements.statusDot.style.display = "none";
     }
