@@ -611,12 +611,13 @@ class PersonLocationCardEditor extends HTMLElement {
     });
 
     this.shadowRoot.querySelectorAll("ha-textfield").forEach((field) => {
-      field.addEventListener("change", (ev) => {
+      const onCommit = (ev) => {
         const target = ev.target;
         const fieldName = target.dataset.field;
         if (!fieldName) return;
         this._updateConfig(fieldName, target.value);
-      });
+      };
+      field.addEventListener("blur", onCommit, true);
     });
 
     const gpsPicker = this.shadowRoot.querySelector("[data-field='gps_entity']");
@@ -698,11 +699,15 @@ class PersonLocationCardEditor extends HTMLElement {
     this.shadowRoot.querySelectorAll("[data-field='device-label']").forEach((field) => {
       const index = Number(field.dataset.index);
       field.value = this._editorEntries[index]?.label || "";
-      field.addEventListener("change", (ev) => {
-        const idx = Number(ev.currentTarget.dataset.index);
-        const value = ev.target.value || "";
-        this._updateDeviceEntry(idx, { label: value });
-      });
+      field.addEventListener(
+        "blur",
+        (ev) => {
+          const idx = Number(ev.currentTarget.dataset.index);
+          const value = ev.target.value || "";
+          this._updateDeviceEntry(idx, { label: value });
+        },
+        true
+      );
     });
   }
 
