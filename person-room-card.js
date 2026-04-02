@@ -344,11 +344,26 @@ class PersonLocationCardEditor extends HTMLElement {
           flex-direction: column;
           gap: 8px;
         }
+        .labels {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
         .device-row {
           display: grid;
-          grid-template-columns: 1fr 1fr auto;
+          grid-template-columns: 1fr 1fr;
           gap: 8px;
           align-items: center;
+        }
+        .device-entity {
+          padding: 12px;
+          border-radius: 6px;
+          background: var(--secondary-background-color);
+          color: var(--primary-text-color);
+          font-size: 14px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
         .hint {
           font-size: 12px;
@@ -358,13 +373,19 @@ class PersonLocationCardEditor extends HTMLElement {
       <div class="form">
         <ha-textfield
           label="Name"
-          .value="${this._config.name || ""}"
+          value="${this._config.name || ""}"
           data-field="name"
         ></ha-textfield>
 
+        <ha-entities-picker
+          label="Room entities"
+          data-field="room_entities"
+        ></ha-entities-picker>
+
         <div class="devices">
-          ${this._renderDeviceRows()}
-          <mwc-button outlined data-action="add-device">Add device</mwc-button>
+          <div class="labels">
+            ${this._renderLabelRows()}
+          </div>
           <div class="hint">
             אפשר להגדיר שם לכל מכשיר. אם לא מוגדר, יוצג כברירת מחדל “מכשיר 1/2/3…”.
           </div>
@@ -377,68 +398,68 @@ class PersonLocationCardEditor extends HTMLElement {
 
         <ha-textfield
           label="Area attribute"
-          .value="${this._config.area_attribute || "area_name"}"
+          value="${this._config.area_attribute || "area_name"}"
           data-field="area_attribute"
         ></ha-textfield>
 
         <ha-textfield
           label="Icon home"
-          .value="${this._config.icon_home || "mdi:home-account"}"
+          value="${this._config.icon_home || "mdi:home-account"}"
           data-field="icon_home"
         ></ha-textfield>
 
         <ha-textfield
           label="Icon away"
-          .value="${this._config.icon_away || "mdi:home-off"}"
+          value="${this._config.icon_away || "mdi:home-off"}"
           data-field="icon_away"
         ></ha-textfield>
 
         <ha-textfield
           label="Text: away"
-          .value="${this._config.text?.away || ""}"
+          value="${this._config.text?.away || ""}"
           data-field="text.away"
         ></ha-textfield>
 
         <ha-textfield
           label="Text: same_room"
-          .value="${this._config.text?.same_room || ""}"
+          value="${this._config.text?.same_room || ""}"
           data-field="text.same_room"
         ></ha-textfield>
 
         <ha-textfield
           label="Text: both"
-          .value="${this._config.text?.both || ""}"
+          value="${this._config.text?.both || ""}"
           data-field="text.both"
         ></ha-textfield>
 
         <ha-textfield
           label="Text: single"
-          .value="${this._config.text?.single || ""}"
+          value="${this._config.text?.single || ""}"
           data-field="text.single"
         ></ha-textfield>
 
         <ha-textfield
           label="Text: item"
-          .value="${this._config.text?.item || ""}"
+          value="${this._config.text?.item || ""}"
           data-field="text.item"
         ></ha-textfield>
 
         <ha-textfield
           label="Text: separator"
-          .value="${this._config.text?.separator || ""}"
+          value="${this._config.text?.separator || ""}"
           data-field="text.separator"
         ></ha-textfield>
 
         <ha-textfield
           label="Text: list"
-          .value="${this._config.text?.list || ""}"
+          value="${this._config.text?.list || ""}"
           data-field="text.list"
         ></ha-textfield>
 
       </div>
     `;
 
-    const editorEntries = this._editorEntries.length > 0 ? this._editorEntries : [{ entity: "", label: "" }];
+    const editorEntries = this._editorEntries;
 
     this.shadowRoot.querySelectorAll("ha-entity-picker").forEach((picker) => {
       picker.hass = this._hass;
@@ -462,62 +483,39 @@ class PersonLocationCardEditor extends HTMLElement {
       });
     });
 
-    this.shadowRoot.querySelectorAll("[data-action='add-device']").forEach((btn) => {
-      btn.addEventListener("click", () => this._addDeviceRow());
-    });
-
-    this.shadowRoot.querySelectorAll("[data-action='remove-device']").forEach((btn) => {
-      btn.addEventListener("click", (ev) => {
-        const index = Number(ev.currentTarget.dataset.index);
-        this._removeDeviceRow(index);
+    const entitiesPicker = this.shadowRoot.querySelector("[data-field='room_entities']");
+    if (entitiesPicker) {
+      entitiesPicker.hass = this._hass;
+      entitiesPicker.value = editorEntries.map((entry) => entry.entity);
+      entitiesPicker.addEventListener("value-changed", (ev) => {
+        const value = ev.detail.value || [];
+        this._updateEntityList(value);
       });
-    });
-
-    this.shadowRoot.querySelectorAll("[data-field='device-entity']").forEach((picker) => {
-      const index = Number(picker.dataset.index);
-      picker.value = editorEntries[index]?.entity || "";
-      picker.addEventListener("value-changed", (ev) => {
-        const index = Number(ev.currentTarget.dataset.index);
-        const value = ev.detail.value || "";
-        this._updateDeviceEntry(index, { entity: value });
-      });
-    });
+    }
 
     this.shadowRoot.querySelectorAll("[data-field='device-label']").forEach((field) => {
-      const index = Number(field.dataset.index);
-      field.value = editorEntries[index]?.label || "";
+      const entityId = field.dataset.entity;
       field.addEventListener("input", (ev) => {
-        const index = Number(ev.currentTarget.dataset.index);
         const value = ev.target.value || "";
-        this._updateDeviceEntry(index, { label: value });
+        this._updateDeviceLabel(entityId, value);
       });
     });
   }
 
-  _renderDeviceRows() {
-    const entries = this._editorEntries.length > 0 ? this._editorEntries : [{ entity: "", label: "" }];
+  _renderLabelRows() {
+    const entries = this._editorEntries;
     return entries
-      .map((entry, index) => {
+      .filter((entry) => entry.entity)
+      .map((entry) => {
         return `
           <div class="device-row">
-            <ha-entity-picker
-              label="Room entity"
-              data-field="device-entity"
-              data-index="${index}"
-              .value="${entry.entity || ""}"
-            ></ha-entity-picker>
+            <div class="device-entity" title="${entry.entity}">${entry.entity}</div>
             <ha-textfield
               label="Label"
               data-field="device-label"
-              data-index="${index}"
-              .value="${entry.label || ""}"
+              data-entity="${entry.entity}"
+              value="${entry.label || ""}"
             ></ha-textfield>
-            <ha-icon-button
-              data-action="remove-device"
-              data-index="${index}"
-              title="Remove"
-              icon="mdi:close"
-            ></ha-icon-button>
           </div>
         `;
       })
@@ -537,24 +535,22 @@ class PersonLocationCardEditor extends HTMLElement {
       .filter((entry) => Boolean(entry && entry.entity));
   }
 
-  _addDeviceRow() {
-    this._editorEntries = [...this._editorEntries, { entity: "", label: "" }];
-    this._render();
-  }
-
-  _removeDeviceRow(index) {
-    this._editorEntries = this._editorEntries.filter((_, i) => i !== index);
-    if (this._editorEntries.length === 0) {
-      this._editorEntries = [{ entity: "", label: "" }];
-    }
+  _updateEntityList(entities) {
+    const prev = this._editorEntries;
+    this._editorEntries = entities.map((entity) => {
+      const existing = prev.find((entry) => entry.entity === entity);
+      return { entity, label: existing?.label || "" };
+    });
     this._commitRoomEntities();
     this._render();
   }
 
-  _updateDeviceEntry(index, patch) {
-    const entries = this._editorEntries.length > 0 ? [...this._editorEntries] : [{ entity: "", label: "" }];
-    const current = entries[index] || { entity: "", label: "" };
-    entries[index] = { ...current, ...patch };
+  _updateDeviceLabel(entityId, label) {
+    if (!entityId) return;
+    const entries = [...this._editorEntries];
+    const index = entries.findIndex((entry) => entry.entity === entityId);
+    if (index === -1) return;
+    entries[index] = { ...entries[index], label };
     this._editorEntries = entries;
     this._commitRoomEntities();
   }
@@ -574,9 +570,29 @@ class PersonLocationCardEditor extends HTMLElement {
     const newConfig = { ...this._config };
     if (path.startsWith("text.")) {
       const key = path.split(".")[1];
-      newConfig.text = { ...(newConfig.text || {}), [key]: value };
+      const textConfig = { ...(newConfig.text || {}) };
+      if (value === "") {
+        delete textConfig[key];
+      } else {
+        textConfig[key] = value;
+      }
+      if (Object.keys(textConfig).length === 0) {
+        delete newConfig.text;
+      } else {
+        newConfig.text = textConfig;
+      }
     } else {
-      newConfig[path] = value;
+      const shouldUnset =
+        (path === "icon_home" ||
+          path === "icon_away" ||
+          path === "area_attribute" ||
+          path === "gps_entity") &&
+        value === "";
+      if (shouldUnset) {
+        delete newConfig[path];
+      } else {
+        newConfig[path] = value;
+      }
     }
     this._config = newConfig;
     this.dispatchEvent(
