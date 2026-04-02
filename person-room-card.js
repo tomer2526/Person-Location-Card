@@ -394,6 +394,16 @@ class PersonLocationCardEditor extends HTMLElement {
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+        .device-name {
+          font-weight: 600;
+        }
+        .device-id {
+          font-size: 12px;
+          color: var(--secondary-text-color);
         }
         .hint {
           font-size: 12px;
@@ -419,7 +429,7 @@ class PersonLocationCardEditor extends HTMLElement {
         </div>
 
         <ha-entity-picker
-          label="GPS entity"
+          label="GPS entity (general location)"
           data-field="gps_entity"
         ></ha-entity-picker>
 
@@ -548,13 +558,18 @@ class PersonLocationCardEditor extends HTMLElement {
     return entries
       .filter((entry) => entry.entity)
       .map((entry) => {
+        const entityId = entry.entity;
+        const friendlyName = this._getFriendlyName(entityId);
         return `
           <div class="device-row">
-            <div class="device-entity" title="${entry.entity}">${entry.entity}</div>
+            <div class="device-entity" title="${this._escapeHtml(entityId)}">
+              <div class="device-name">${this._escapeHtml(friendlyName)}</div>
+              <div class="device-id">${this._escapeHtml(entityId)}</div>
+            </div>
             <ha-textfield
               label="Label"
               data-field="device-label"
-              data-entity="${entry.entity}"
+              data-entity="${entityId}"
               value="${entry.label || ""}"
             ></ha-textfield>
           </div>
@@ -600,6 +615,20 @@ class PersonLocationCardEditor extends HTMLElement {
     if (customElements.get("ha-entities-picker")) return "ha-entities-picker";
     if (customElements.get("ha-entity-multi-picker")) return "ha-entity-multi-picker";
     return "ha-textfield";
+  }
+
+  _getFriendlyName(entityId) {
+    const stateObj = this._hass?.states?.[entityId];
+    return stateObj?.attributes?.friendly_name || entityId;
+  }
+
+  _escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   }
 
   _commitRoomEntities() {
