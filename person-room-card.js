@@ -532,13 +532,13 @@ class PersonLocationCardEditor extends HTMLElement {
           supportsEntityPicker
             ? `
               <ha-entity-picker
-                label="GPS entity (general location)"
+                label="General location entity"
                 data-field="gps_entity"
               ></ha-entity-picker>
             `
             : `
               <label>
-                <div class="hint">GPS entity (general location)</div>
+                <div class="hint">General location entity</div>
                 <input
                   class="entity-input"
                   list="plc-gps-entities"
@@ -549,6 +549,9 @@ class PersonLocationCardEditor extends HTMLElement {
               </label>
             `
         }
+        <div class="hint">
+          The entity is intended to detect the user’s general location (such as via GPS or IP) to determine whether they are home, since Bluetooth-based detection is not always reliable.
+        </div>
 
         <ha-textfield
           label="Area attribute"
