@@ -159,7 +159,7 @@ class PersonRoomCard extends HTMLElement {
     });
 
     const entries = roomEntities.map((entry, index) => {
-      const label = entry.label || `מכשיר ${index + 1}`;
+      const label = entry.label || `Device ${index + 1}`;
       const room = this._getAreaName(entry.entity, area_attribute);
       return { entity: entry.entity, label, room };
     });
@@ -190,7 +190,7 @@ class PersonRoomCard extends HTMLElement {
       if (isUnavailable) {
         this._elements.statusDot.style.background = "rgba(0,0,0,0.25)";
         this._elements.statusDot.textContent = "?";
-        this._elements.statusDot.setAttribute("title", "מצב GPS לא זמין");
+        this._elements.statusDot.setAttribute("title", "GPS status unavailable");
       } else {
         this._elements.statusDot.textContent = "";
         this._elements.statusDot.style.background = isHome
@@ -198,7 +198,7 @@ class PersonRoomCard extends HTMLElement {
           : "var(--warning-color, orange)";
         this._elements.statusDot.setAttribute(
           "title",
-          isHome ? "הטלפון בבית לפי GPS" : "הטלפון לא בבית לפי GPS"
+          isHome ? "GPS: at home" : "GPS: away"
         );
       }
 
@@ -248,10 +248,10 @@ class PersonRoomCard extends HTMLElement {
   }
 
   _buildLabel({ present, text }) {
-    const textAway = text.away || "לא בבית";
-    const textSame = text.same_room || "נמצא בחדר — {room}";
+    const textAway = text.away || "Away";
+    const textSame = text.same_room || "In room — {room}";
     const textBoth = text.both || "{label1}: {room1} | {label2}: {room2}";
-    const textSingle = text.single || "נמצא בחדר — {room}";
+    const textSingle = text.single || "In room — {room}";
     const itemTemplate = text.item || "{label}: {room}";
     const separator = text.separator || " | ";
     const listTemplate = text.list || "{items}";
@@ -411,9 +411,6 @@ class PersonLocationCardEditor extends HTMLElement {
     if (!this.shadowRoot) return;
     this._hasRendered = true;
 
-    const devicePickerTag = this._getDevicePickerTag();
-    const gpsPickerTag = this._getGpsPickerTag();
-
     this.shadowRoot.innerHTML = `
       <style>
         .form {
@@ -496,28 +493,17 @@ class PersonLocationCardEditor extends HTMLElement {
         ></ha-textfield>
 
         <div class="devices">
-          ${this._renderDeviceRows(devicePickerTag)}
+          ${this._renderDeviceRows()}
           <button class="add-device" type="button" data-action="add-device">Add device</button>
           <div class="hint">
-            אפשר להגדיר שם לכל מכשיר. אם לא מוגדר, יוצג כברירת מחדל “מכשיר 1/2/3…”.
+            You can set a label for each device. If not set, the default is “Device 1/2/3…”.
           </div>
         </div>
 
-        ${gpsPickerTag === "ha-textfield"
-          ? `
-            <ha-textfield
-              label="GPS entity (general location)"
-              data-field="gps_entity"
-              placeholder="device_tracker.person_phone"
-              value="${this._config.gps_entity || ""}"
-            ></ha-textfield>
-          `
-          : `
-            <${gpsPickerTag}
-              label="GPS entity (general location)"
-              data-field="gps_entity"
-            ></${gpsPickerTag}>
-          `}
+        <ha-entity-picker
+          label="GPS entity (general location)"
+          data-field="gps_entity"
+        ></ha-entity-picker>
 
         <ha-textfield
           label="Area attribute"
@@ -579,19 +565,12 @@ class PersonLocationCardEditor extends HTMLElement {
 
     const gpsPicker = this.shadowRoot.querySelector("[data-field='gps_entity']");
     if (gpsPicker) {
-      if (gpsPicker.tagName === "HA-ENTITY-PICKER") {
-        gpsPicker.hass = this._hass;
-        gpsPicker.value = this._config.gps_entity || "";
-        gpsPicker.includeDomains = ["device_tracker"];
-        gpsPicker.addEventListener("value-changed", (ev) => {
-          this._updateConfig("gps_entity", ev.detail.value || "");
-        });
-      } else {
-        gpsPicker.value = this._config.gps_entity || "";
-        gpsPicker.addEventListener("input", (ev) => {
-          this._updateConfig("gps_entity", ev.target.value || "");
-        });
-      }
+      gpsPicker.hass = this._hass;
+      gpsPicker.value = this._config.gps_entity || "";
+      gpsPicker.includeDomains = ["device_tracker"];
+      gpsPicker.addEventListener("value-changed", (ev) => {
+        this._updateConfig("gps_entity", ev.detail.value || "");
+      });
     }
 
     this.shadowRoot.querySelectorAll("[data-action='add-device']").forEach((btn) => {
@@ -608,23 +587,14 @@ class PersonLocationCardEditor extends HTMLElement {
     this.shadowRoot.querySelectorAll("[data-field='device-entity']").forEach((picker) => {
       const index = Number(picker.dataset.index);
       const value = this._editorEntries[index]?.entity || "";
-      if (picker.tagName === "HA-ENTITY-PICKER") {
-        picker.hass = this._hass;
-        picker.value = value;
-        picker.includeDomains = ["sensor", "device_tracker"];
-        picker.addEventListener("value-changed", (ev) => {
-          const idx = Number(ev.currentTarget.dataset.index);
-          const newValue = ev.detail.value || "";
-          this._updateDeviceEntry(idx, { entity: newValue });
-        });
-      } else {
-        picker.value = value;
-        picker.addEventListener("input", (ev) => {
-          const idx = Number(ev.currentTarget.dataset.index);
-          const newValue = ev.target.value || "";
-          this._updateDeviceEntry(idx, { entity: newValue });
-        });
-      }
+      picker.hass = this._hass;
+      picker.value = value;
+      picker.includeDomains = ["sensor", "device_tracker"];
+      picker.addEventListener("value-changed", (ev) => {
+        const idx = Number(ev.currentTarget.dataset.index);
+        const newValue = ev.detail.value || "";
+        this._updateDeviceEntry(idx, { entity: newValue });
+      });
     });
 
     this.shadowRoot.querySelectorAll("[data-field='device-label']").forEach((field) => {
@@ -638,36 +608,23 @@ class PersonLocationCardEditor extends HTMLElement {
     });
   }
 
-  _renderDeviceRows(pickerTag) {
+  _renderDeviceRows() {
     const entries = this._editorEntries.length > 0 ? this._editorEntries : [{ entity: "", label: "" }];
     return entries
       .map((entry, index) => {
         const entityId = entry.entity;
-        const friendlyName = entityId ? this._getFriendlyName(entityId) : "בחר ישות";
-        const entityField = pickerTag === "ha-textfield"
-          ? `
-            <ha-textfield
-              label="Room entity"
-              data-field="device-entity"
-              data-index="${index}"
-              placeholder="sensor.example_room"
-              value="${entityId || ""}"
-            ></ha-textfield>
-          `
-          : `
-            <${pickerTag}
-              label="Room entity"
-              data-field="device-entity"
-              data-index="${index}"
-            ></${pickerTag}>
-          `;
+        const friendlyName = entityId ? this._getFriendlyName(entityId) : "Select entity";
         return `
           <div class="device-row">
             <div class="device-entity" title="${this._escapeHtml(entityId || "")}">
               <div class="device-name">${this._escapeHtml(friendlyName)}</div>
               <div class="device-id">${this._escapeHtml(entityId || "")}</div>
             </div>
-            ${entityField}
+            <ha-entity-picker
+              label="Room entity"
+              data-field="device-entity"
+              data-index="${index}"
+            ></ha-entity-picker>
             <ha-textfield
               label="Label"
               data-field="device-label"
@@ -721,16 +678,6 @@ class PersonLocationCardEditor extends HTMLElement {
     entries[index] = { ...current, ...patch };
     this._editorEntries = entries;
     this._commitRoomEntities();
-  }
-
-  _getDevicePickerTag() {
-    if (customElements.get("ha-entity-picker")) return "ha-entity-picker";
-    return "ha-textfield";
-  }
-
-  _getGpsPickerTag() {
-    if (customElements.get("ha-entity-picker")) return "ha-entity-picker";
-    return "ha-textfield";
   }
 
   _getFriendlyName(entityId) {
