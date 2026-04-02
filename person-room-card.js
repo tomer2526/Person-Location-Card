@@ -882,9 +882,23 @@ class PersonLocationCardEditor extends HTMLElement {
 
   _getEntitiesByDomains(domains) {
     if (!this._hass || !this._hass.states) return [];
-    return Object.keys(this._hass.states)
-      .filter((entityId) => domains.includes(entityId.split(".")[0]))
-      .sort((a, b) => a.localeCompare(b));
+    const entities = Object.keys(this._hass.states).filter((entityId) =>
+      domains.includes(entityId.split(".")[0])
+    );
+    return entities.sort((a, b) => {
+      const aIsArea = this._isAreaEntity(a);
+      const bIsArea = this._isAreaEntity(b);
+      if (aIsArea !== bIsArea) return aIsArea ? -1 : 1;
+      return a.localeCompare(b);
+    });
+  }
+
+  _isAreaEntity(entityId) {
+    const name = this._getFriendlyName(entityId) || "";
+    return (
+      entityId.toLowerCase().includes("area") ||
+      name.toLowerCase().includes("area")
+    );
   }
 
   _escapeHtml(value) {
