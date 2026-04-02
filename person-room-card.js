@@ -614,7 +614,12 @@ class PersonLocationCardEditor extends HTMLElement {
       const onCommit = (ev) => {
         const target = ev.target;
         const fieldName = target.dataset.field;
-        if (!fieldName || fieldName === "device-label") return;
+        if (!fieldName) return;
+        if (fieldName === "device-label") {
+          const idx = Number(target.dataset.index);
+          this._updateDeviceEntry(idx, { label: target.value || "" });
+          return;
+        }
         this._updateConfig(fieldName, target.value);
       };
       field.addEventListener("blur", onCommit, true);
@@ -622,10 +627,7 @@ class PersonLocationCardEditor extends HTMLElement {
         "keydown",
         (ev) => {
           if (ev.key !== "Enter") return;
-          const target = ev.target;
-          const fieldName = target.dataset.field;
-          if (!fieldName || fieldName === "device-label") return;
-          this._updateConfig(fieldName, target.value);
+          onCommit(ev);
         },
         true
       );
@@ -642,8 +644,13 @@ class PersonLocationCardEditor extends HTMLElement {
         });
       } else {
         gpsPicker.value = this._config.gps_entity || "";
-        gpsPicker.addEventListener("change", (ev) => {
+        const onCommit = (ev) => {
           this._updateConfig("gps_entity", ev.target.value || "");
+        };
+        gpsPicker.addEventListener("change", onCommit);
+        gpsPicker.addEventListener("keydown", (ev) => {
+          if (ev.key !== "Enter") return;
+          onCommit(ev);
         });
       }
     }
@@ -699,10 +706,15 @@ class PersonLocationCardEditor extends HTMLElement {
         });
       } else {
         picker.value = value;
-        picker.addEventListener("change", (ev) => {
+        const onCommit = (ev) => {
           const idx = Number(ev.currentTarget.dataset.index);
           const newValue = ev.target.value || "";
           this._updateDeviceEntry(idx, { entity: newValue });
+        };
+        picker.addEventListener("change", onCommit);
+        picker.addEventListener("keydown", (ev) => {
+          if (ev.key !== "Enter") return;
+          onCommit(ev);
         });
       }
     });
@@ -710,25 +722,6 @@ class PersonLocationCardEditor extends HTMLElement {
     this.shadowRoot.querySelectorAll("[data-field='device-label']").forEach((field) => {
       const index = Number(field.dataset.index);
       field.value = this._editorEntries[index]?.label || "";
-      field.addEventListener(
-        "blur",
-        (ev) => {
-          const idx = Number(ev.currentTarget.dataset.index);
-          const value = ev.target.value || "";
-          this._updateDeviceEntry(idx, { label: value });
-        },
-        true
-      );
-      field.addEventListener(
-        "keydown",
-        (ev) => {
-          if (ev.key !== "Enter") return;
-          const idx = Number(ev.currentTarget.dataset.index);
-          const value = ev.target.value || "";
-          this._updateDeviceEntry(idx, { label: value });
-        },
-        true
-      );
     });
   }
 
