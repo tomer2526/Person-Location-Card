@@ -134,19 +134,9 @@ class PersonRoomCard extends HTMLElement {
     const statusDot = document.createElement("div");
     statusDot.className = "status-dot";
 
-    const tooltipSupported = Boolean(customElements.get("ha-tooltip"));
     const statusWrapper = document.createElement("div");
     statusWrapper.className = "status-dot-wrapper";
-
-    let statusTooltip = null;
-    if (tooltipSupported) {
-      statusTooltip = document.createElement("ha-tooltip");
-      statusTooltip.className = "status-dot-tooltip";
-      statusTooltip.appendChild(statusDot);
-      statusWrapper.appendChild(statusTooltip);
-    } else {
-      statusWrapper.appendChild(statusDot);
-    }
+    statusWrapper.appendChild(statusDot);
 
     const iconWrapper = document.createElement("div");
     iconWrapper.className = "icon";
@@ -167,16 +157,7 @@ class PersonRoomCard extends HTMLElement {
     this.shadowRoot.appendChild(style);
     this.shadowRoot.appendChild(card);
 
-    this._elements = {
-      card,
-      statusWrapper,
-      statusTooltip,
-      statusDot,
-      iconWrapper,
-      icon,
-      name,
-      label,
-    };
+    this._elements = { card, statusWrapper, statusDot, iconWrapper, icon, name, label };
 
     card.addEventListener("click", () => this._handleTap());
   }
@@ -232,24 +213,17 @@ class PersonRoomCard extends HTMLElement {
         this._elements.statusDot.style.background =
           "var(--disabled-text-color, #9e9e9e)";
         this._elements.statusDot.textContent = "?";
-        if (this._elements.statusTooltip) {
-          this._elements.statusTooltip.message = "General location status unavailable";
-          this._elements.statusTooltip.setAttribute("message", "General location status unavailable");
-        } else {
-          this._elements.statusWrapper.setAttribute("title", "General location status unavailable");
-        }
+        this._elements.statusWrapper.setAttribute(
+          "title",
+          "General location status unavailable"
+        );
       } else {
         this._elements.statusDot.textContent = "";
         this._elements.statusDot.style.background = isHome
           ? "var(--success-color, #2e7d32)"
           : "var(--warning-color, #ff9800)";
         const tooltipText = isHome ? "General location: at home" : "General location: away";
-        if (this._elements.statusTooltip) {
-          this._elements.statusTooltip.message = tooltipText;
-          this._elements.statusTooltip.setAttribute("message", tooltipText);
-        } else {
-          this._elements.statusWrapper.setAttribute("title", tooltipText);
-        }
+        this._elements.statusWrapper.setAttribute("title", tooltipText);
       }
 
       this._elements.statusWrapper.style.display = "flex";
