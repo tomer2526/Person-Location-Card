@@ -316,12 +316,26 @@ class PersonLocationCardEditor extends HTMLElement {
     this._config = {};
     this._hass = null;
     this._editorEntries = [];
+    this._entriesKey = "";
+    this._initialized = false;
   }
 
   setConfig(config) {
     this._config = config || {};
     this._editorEntries = this._normalizeEntries(this._config);
-    this._render();
+    const newKey = JSON.stringify(this._editorEntries.map((entry) => entry.entity));
+
+    if (!this._initialized) {
+      this._entriesKey = newKey;
+      this._initialized = true;
+      this._render();
+      return;
+    }
+
+    if (newKey !== this._entriesKey) {
+      this._entriesKey = newKey;
+      this._render();
+    }
   }
 
   set hass(hass) {
@@ -331,6 +345,22 @@ class PersonLocationCardEditor extends HTMLElement {
 
   _render() {
     if (!this.shadowRoot) return;
+
+    const multiPickerTag = this._getMultiPickerTag();
+    const entitiesSelector = multiPickerTag === "ha-textfield"
+      ? `
+        <ha-textfield
+          label="Room entities"
+          data-field="room_entities"
+          placeholder="sensor.room_a, sensor.room_b"
+        ></ha-textfield>
+      `
+      : `
+        <${multiPickerTag}
+          label="Room entities"
+          data-field="room_entities"
+        ></${multiPickerTag}>
+      `;
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -377,10 +407,7 @@ class PersonLocationCardEditor extends HTMLElement {
           data-field="name"
         ></ha-textfield>
 
-        <ha-entities-picker
-          label="Room entities"
-          data-field="room_entities"
-        ></ha-entities-picker>
+        ${entitiesSelector}
 
         <div class="devices">
           <div class="labels">
@@ -469,6 +496,7 @@ class PersonLocationCardEditor extends HTMLElement {
     if (gpsPicker) {
       gpsPicker.hass = this._hass;
       gpsPicker.value = this._config.gps_entity || "";
+      gpsPicker.includeDomains = ["device_tracker"];
       gpsPicker.addEventListener("value-changed", (ev) => {
         this._updateConfig("gps_entity", ev.detail.value || "");
       });
@@ -485,12 +513,25 @@ class PersonLocationCardEditor extends HTMLElement {
 
     const entitiesPicker = this.shadowRoot.querySelector("[data-field='room_entities']");
     if (entitiesPicker) {
-      entitiesPicker.hass = this._hass;
-      entitiesPicker.value = editorEntries.map((entry) => entry.entity);
-      entitiesPicker.addEventListener("value-changed", (ev) => {
-        const value = ev.detail.value || [];
-        this._updateEntityList(value);
-      });
+      const current = editorEntries.map((entry) => entry.entity);
+      if (entitiesPicker.tagName === "HA-TEXTFIELD") {
+        entitiesPicker.value = current.join(", ");
+        entitiesPicker.addEventListener("input", (ev) => {
+          const value = (ev.target.value || "")
+            .split(",")
+            .map((entry) => entry.trim())
+            .filter((entry) => entry);
+          this._updateEntityList(value);
+        });
+      } else {
+        entitiesPicker.hass = this._hass;
+        entitiesPicker.value = current;
+        entitiesPicker.includeDomains = ["sensor", "device_tracker"];
+        entitiesPicker.addEventListener("value-changed", (ev) => {
+          const value = ev.detail.value || [];
+          this._updateEntityList(value);
+        });
+      }
     }
 
     this.shadowRoot.querySelectorAll("[data-field='device-label']").forEach((field) => {
@@ -553,6 +594,12 @@ class PersonLocationCardEditor extends HTMLElement {
     entries[index] = { ...entries[index], label };
     this._editorEntries = entries;
     this._commitRoomEntities();
+  }
+
+  _getMultiPickerTag() {
+    if (customElements.get("ha-entities-picker")) return "ha-entities-picker";
+    if (customElements.get("ha-entity-multi-picker")) return "ha-entity-multi-picker";
+    return "ha-textfield";
   }
 
   _commitRoomEntities() {
