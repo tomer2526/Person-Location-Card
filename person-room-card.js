@@ -536,9 +536,6 @@ class PersonLocationCardEditor extends HTMLElement {
           </div>
           ${this._renderDeviceRows(supportsEntityPicker)}
           <button class="add-device" type="button" data-action="add-device">Add device</button>
-          <div class="hint">
-            You can set a label for each device. If not set, the default is “Device 1/2/3…”.
-          </div>
         </div>
 
         ${
@@ -775,7 +772,7 @@ class PersonLocationCardEditor extends HTMLElement {
                         data-field="device-entity"
                         data-index="${index}"
                       ></ha-entity-picker>
-                      <div class="picker-meta">${this._escapeHtml(entityId ? `${friendlyName} (${entityId})` : "Select entity")}</div>
+                      <div class="picker-meta">${this._escapeHtml(entityId ? `${friendlyName}` : "Select entity")}</div>
                     </div>
                   `
                   : `
@@ -788,7 +785,7 @@ class PersonLocationCardEditor extends HTMLElement {
                         placeholder="sensor.example_room"
                         value="${this._escapeHtml(entityId || "")}"
                       />
-                      <div class="picker-meta">${this._escapeHtml(entityId ? `${friendlyName} (${entityId})` : "Select entity")}</div>
+                      <div class="picker-meta">${this._escapeHtml(entityId ? `${friendlyName}` : "Select entity")}</div>
                     </div>
                   `
               }
