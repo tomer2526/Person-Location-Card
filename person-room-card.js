@@ -229,7 +229,8 @@ class PersonRoomCard extends HTMLElement {
       const isHome = !isUnavailable && state === "home";
 
       if (isUnavailable) {
-        this._elements.statusDot.style.background = "rgba(0,0,0,0.25)";
+        this._elements.statusDot.style.background =
+          "var(--disabled-text-color, #9e9e9e)";
         this._elements.statusDot.textContent = "?";
         if (this._elements.statusTooltip) {
           this._elements.statusTooltip.message = "General location status unavailable";
@@ -240,8 +241,8 @@ class PersonRoomCard extends HTMLElement {
       } else {
         this._elements.statusDot.textContent = "";
         this._elements.statusDot.style.background = isHome
-          ? "limegreen"
-          : "var(--warning-color, orange)";
+          ? "var(--success-color, #2e7d32)"
+          : "var(--warning-color, #ff9800)";
         const tooltipText = isHome ? "General location: at home" : "General location: away";
         if (this._elements.statusTooltip) {
           this._elements.statusTooltip.message = tooltipText;
