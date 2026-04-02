@@ -431,7 +431,7 @@ class PersonLocationCardEditor extends HTMLElement {
         }
         .device-row {
           display: grid;
-          grid-template-columns: auto 1fr 1fr auto;
+          grid-template-columns: auto 1fr auto;
           gap: 8px;
           align-items: center;
         }
@@ -452,10 +452,6 @@ class PersonLocationCardEditor extends HTMLElement {
         .picker-meta {
           font-size: 12px;
           color: var(--secondary-text-color);
-        }
-        .friendly-col {
-          font-size: 14px;
-          color: var(--primary-text-color);
         }
         .entity-input {
           width: 100%;
@@ -753,7 +749,6 @@ class PersonLocationCardEditor extends HTMLElement {
                     </div>
                   `
               }
-              <div class="friendly-col">${this._escapeHtml(friendlyName || "-")}</div>
               <button
                 class="drag-handle"
                 type="button"
