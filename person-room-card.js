@@ -380,6 +380,7 @@ class PersonLocationCardEditor extends HTMLElement {
     this._entriesKey = "";
     this._initialized = false;
     this._hasRendered = false;
+    this._keyListenerAttached = false;
   }
 
   setConfig(config) {
@@ -623,14 +624,6 @@ class PersonLocationCardEditor extends HTMLElement {
         this._updateConfig(fieldName, target.value);
       };
       field.addEventListener("blur", onCommit, true);
-      field.addEventListener(
-        "keydown",
-        (ev) => {
-          if (ev.key !== "Enter") return;
-          onCommit(ev);
-        },
-        true
-      );
     });
 
     const gpsPicker = this.shadowRoot.querySelector("[data-field='gps_entity']");
@@ -723,6 +716,20 @@ class PersonLocationCardEditor extends HTMLElement {
       const index = Number(field.dataset.index);
       field.value = this._editorEntries[index]?.label || "";
     });
+
+    if (!this._keyListenerAttached) {
+      this._keyListenerAttached = true;
+      this.shadowRoot.addEventListener(
+        "keydown",
+        (ev) => {
+          if (ev.key !== "Enter") return;
+          const fieldEl = ev.composedPath().find((node) => node?.dataset?.field);
+          if (!fieldEl) return;
+          this._commitField(fieldEl);
+        },
+        true
+      );
+    }
   }
 
   _renderDeviceRows(supportsEntityPicker) {
@@ -836,6 +843,26 @@ class PersonLocationCardEditor extends HTMLElement {
     entries[index] = { ...current, ...patch };
     this._editorEntries = entries;
     this._commitRoomEntities();
+  }
+
+  _commitField(fieldEl) {
+    const fieldName = fieldEl.dataset.field;
+    if (!fieldName) return;
+    if (fieldName === "device-label") {
+      const idx = Number(fieldEl.dataset.index);
+      this._updateDeviceEntry(idx, { label: fieldEl.value || "" });
+      return;
+    }
+    if (fieldName === "device-entity") {
+      const idx = Number(fieldEl.dataset.index);
+      this._updateDeviceEntry(idx, { entity: fieldEl.value || "" });
+      return;
+    }
+    if (fieldName === "gps_entity") {
+      this._updateConfig("gps_entity", fieldEl.value || "");
+      return;
+    }
+    this._updateConfig(fieldName, fieldEl.value);
   }
 
   _getFriendlyName(entityId) {
