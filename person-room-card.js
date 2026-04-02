@@ -445,6 +445,15 @@ class PersonLocationCardEditor extends HTMLElement {
           font-weight: 600;
           color: var(--primary-text-color);
         }
+        .section-title {
+          font-weight: 700;
+          color: var(--primary-text-color);
+        }
+        .section-description {
+          font-size: 12px;
+          color: var(--secondary-text-color);
+          margin-bottom: 4px;
+        }
         .picker-col {
           display: flex;
           flex-direction: column;
@@ -521,6 +530,10 @@ class PersonLocationCardEditor extends HTMLElement {
         ></ha-textfield>
 
         <div class="devices">
+          <div class="section-title">Devices</div>
+          <div class="section-description">
+            Add one or more entities that report a room-level location.
+          </div>
           ${this._renderDeviceRows(supportsEntityPicker)}
           <button class="add-device" type="button" data-action="add-device">Add device</button>
           <div class="hint">
