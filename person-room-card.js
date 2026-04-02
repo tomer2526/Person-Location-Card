@@ -465,7 +465,7 @@ class PersonLocationCardEditor extends HTMLElement {
           color: var(--secondary-text-color);
         }
         .entity-input {
-          width: 100%;
+          width: stretch;
           padding: 10px 12px;
           border-radius: 6px;
           border: 1px solid var(--divider-color);
