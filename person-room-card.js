@@ -217,7 +217,11 @@ class PersonRoomCard extends HTMLElement {
 
     const allSameRoom = present.every((entry) => entry.room === present[0].room);
     if (present.length > 1 && allSameRoom) {
-      return this._replaceTokens(textSame, { room: present[0].room, count: present.length });
+      const sameTemplate = this._normalizeSameRoomTemplate(textSame);
+      return this._replaceTokens(sameTemplate, {
+        room: present[0].room,
+        count: present.length,
+      });
     }
 
     if (present.length === 1) {
@@ -250,6 +254,11 @@ class PersonRoomCard extends HTMLElement {
     return Object.keys(values).reduce((acc, key) => {
       return acc.replace(new RegExp(`\\{${key}\\}`, "g"), values[key]);
     }, template);
+  }
+
+  _normalizeSameRoomTemplate(template) {
+    if (template.includes("{room}")) return template;
+    return `${template} - {room}`;
   }
 
   _handleTap() {
@@ -489,33 +498,15 @@ class PersonLocationCardEditor extends HTMLElement {
         ></ha-textfield>
 
         <ha-textfield
-          label="Text: both"
-          value="${this._config.text?.both || ""}"
-          data-field="text.both"
-        ></ha-textfield>
-
-        <ha-textfield
           label="Text: single"
           value="${this._config.text?.single || ""}"
           data-field="text.single"
         ></ha-textfield>
 
         <ha-textfield
-          label="Text: item"
-          value="${this._config.text?.item || ""}"
-          data-field="text.item"
-        ></ha-textfield>
-
-        <ha-textfield
           label="Text: separator"
           value="${this._config.text?.separator || ""}"
           data-field="text.separator"
-        ></ha-textfield>
-
-        <ha-textfield
-          label="Text: list"
-          value="${this._config.text?.list || ""}"
-          data-field="text.list"
         ></ha-textfield>
 
       </div>

@@ -51,7 +51,7 @@ gps_entity: device_tracker.alex_phone
 - `icon_home` / `icon_away` (string): MDI icons for home/away.
 - `text` (object): Text overrides. Available fields:
   - `away`: Text when not home
-  - `same_room`: Text when everyone is in the same room (`{room}`, `{count}`)
+  - `same_room`: Text when everyone is in the same room (`{room}`, `{count}`). If `{room}` is missing, the card will append ` - {room}` automatically.
   - `both`: Text when exactly two devices are in different rooms (`{label1}`, `{room1}`, `{label2}`, `{room2}`)
   - `single`: Text when only one room is detected (`{room}`, `{label}`)
   - `item`: List item template (default `{label}: {room}`)
