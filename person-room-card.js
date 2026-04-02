@@ -614,10 +614,21 @@ class PersonLocationCardEditor extends HTMLElement {
       const onCommit = (ev) => {
         const target = ev.target;
         const fieldName = target.dataset.field;
-        if (!fieldName) return;
+        if (!fieldName || fieldName === "device-label") return;
         this._updateConfig(fieldName, target.value);
       };
       field.addEventListener("blur", onCommit, true);
+      field.addEventListener(
+        "keydown",
+        (ev) => {
+          if (ev.key !== "Enter") return;
+          const target = ev.target;
+          const fieldName = target.dataset.field;
+          if (!fieldName || fieldName === "device-label") return;
+          this._updateConfig(fieldName, target.value);
+        },
+        true
+      );
     });
 
     const gpsPicker = this.shadowRoot.querySelector("[data-field='gps_entity']");
@@ -702,6 +713,16 @@ class PersonLocationCardEditor extends HTMLElement {
       field.addEventListener(
         "blur",
         (ev) => {
+          const idx = Number(ev.currentTarget.dataset.index);
+          const value = ev.target.value || "";
+          this._updateDeviceEntry(idx, { label: value });
+        },
+        true
+      );
+      field.addEventListener(
+        "keydown",
+        (ev) => {
+          if (ev.key !== "Enter") return;
           const idx = Number(ev.currentTarget.dataset.index);
           const value = ev.target.value || "";
           this._updateDeviceEntry(idx, { label: value });
