@@ -21,10 +21,12 @@ class PersonRoomCard extends HTMLElement {
       throw new Error("room_entities must be an array of entity IDs");
     }
 
+    const glEntity = config.gl_entity ?? config.gps_entity ?? null;
+
     this._config = {
       name: config.name || "",
       room_entities: roomEntities,
-      gps_entity: config.gps_entity || null,
+      gl_entity: glEntity || null,
       area_attribute: config.area_attribute || "area_name",
       icon_home:
         config.icon_home === ""
@@ -102,10 +104,17 @@ class PersonRoomCard extends HTMLElement {
         line-height: 1.4;
         text-align: center;
       }
-      .status-dot {
+      .status-dot-wrapper {
         position: absolute;
         top: 10px;
         right: 10px;
+        width: 12px;
+        height: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .status-dot {
         width: 12px;
         height: 12px;
         border-radius: 50%;
@@ -127,6 +136,13 @@ class PersonRoomCard extends HTMLElement {
     const statusDot = document.createElement("div");
     statusDot.className = "status-dot";
 
+    const tooltipSupported = Boolean(customElements.get("ha-tooltip"));
+    const statusWrapper = tooltipSupported
+      ? document.createElement("ha-tooltip")
+      : document.createElement("div");
+    statusWrapper.className = "status-dot-wrapper";
+    statusWrapper.appendChild(statusDot);
+
     const iconWrapper = document.createElement("div");
     iconWrapper.className = "icon";
     const icon = document.createElement("ha-icon");
@@ -138,7 +154,7 @@ class PersonRoomCard extends HTMLElement {
     const label = document.createElement("div");
     label.className = "label";
 
-    card.appendChild(statusDot);
+    card.appendChild(statusWrapper);
     card.appendChild(iconWrapper);
     card.appendChild(name);
     card.appendChild(label);
@@ -146,7 +162,7 @@ class PersonRoomCard extends HTMLElement {
     this.shadowRoot.appendChild(style);
     this.shadowRoot.appendChild(card);
 
-    this._elements = { card, statusDot, iconWrapper, icon, name, label };
+    this._elements = { card, statusWrapper, statusDot, iconWrapper, icon, name, label };
 
     card.addEventListener("click", () => this._handleTap());
   }
@@ -154,7 +170,7 @@ class PersonRoomCard extends HTMLElement {
   _render() {
     if (!this._config || !this._hass || !this._elements) return;
 
-    const { name, room_entities, gps_entity, area_attribute, icon_home, icon_away, text } = this._config;
+    const { name, room_entities, gl_entity, area_attribute, icon_home, icon_away, text } = this._config;
 
     const roomEntities = room_entities.map((item, index) => {
       if (typeof item === "string") return { entity: item };
@@ -191,8 +207,8 @@ class PersonRoomCard extends HTMLElement {
     this._elements.name.textContent = name;
     this._elements.label.textContent = labelText;
 
-    if (gps_entity) {
-      const tracker = this._hass.states[gps_entity];
+    if (gl_entity) {
+      const tracker = this._hass.states[gl_entity];
       const state = tracker?.state;
       const isUnavailable =
         !tracker || state === "unknown" || state === "unavailable";
@@ -201,21 +217,29 @@ class PersonRoomCard extends HTMLElement {
       if (isUnavailable) {
         this._elements.statusDot.style.background = "rgba(0,0,0,0.25)";
         this._elements.statusDot.textContent = "?";
-        this._elements.statusDot.setAttribute("title", "GPS status unavailable");
+        if (this._elements.statusWrapper.tagName === "HA-TOOLTIP") {
+          this._elements.statusWrapper.message = "General location status unavailable";
+          this._elements.statusWrapper.setAttribute("message", "General location status unavailable");
+        } else {
+          this._elements.statusWrapper.setAttribute("title", "General location status unavailable");
+        }
       } else {
         this._elements.statusDot.textContent = "";
         this._elements.statusDot.style.background = isHome
           ? "limegreen"
           : "var(--warning-color, orange)";
-        this._elements.statusDot.setAttribute(
-          "title",
-          isHome ? "GPS: at home" : "GPS: away"
-        );
+        const tooltipText = isHome ? "General location: at home" : "General location: away";
+        if (this._elements.statusWrapper.tagName === "HA-TOOLTIP") {
+          this._elements.statusWrapper.message = tooltipText;
+          this._elements.statusWrapper.setAttribute("message", tooltipText);
+        } else {
+          this._elements.statusWrapper.setAttribute("title", tooltipText);
+        }
       }
 
-      this._elements.statusDot.style.display = "flex";
+      this._elements.statusWrapper.style.display = "flex";
     } else {
-      this._elements.statusDot.style.display = "none";
+      this._elements.statusWrapper.style.display = "none";
     }
 
     if (this._hasTapAction()) {
@@ -362,8 +386,8 @@ class PersonRoomCard extends HTMLElement {
       })
       .filter((entity) => Boolean(entity));
 
-    if (this._config?.gps_entity) {
-      entityIds.push(this._config.gps_entity);
+    if (this._config?.gl_entity) {
+      entityIds.push(this._config.gl_entity);
     }
 
     if (entityIds.length === 0) return null;
@@ -378,7 +402,7 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: "person-room-card",
   name: "Person Location Card",
-  description: "Shows room-level BLE presence plus GPS home/away indicator.",
+  description: "Shows room-level BLE presence plus a general location home/away indicator.",
 });
 
 class PersonLocationCardEditor extends HTMLElement {
@@ -554,7 +578,7 @@ class PersonLocationCardEditor extends HTMLElement {
             ? `
               <ha-entity-picker
                 label="General location entity"
-                data-field="gps_entity"
+                data-field="gl_entity"
               ></ha-entity-picker>
             `
             : `
@@ -562,10 +586,10 @@ class PersonLocationCardEditor extends HTMLElement {
                 <div class="hint">General location entity</div>
                 <input
                   class="entity-input"
-                  list="plc-gps-entities"
-                  data-field="gps_entity"
+                  list="plc-gl-entities"
+                  data-field="gl_entity"
                   placeholder="device_tracker.person_phone"
-                  value="${this._config.gps_entity || ""}"
+                  value="${this._config.gl_entity || ""}"
                 />
               </label>
             `
@@ -631,7 +655,7 @@ class PersonLocationCardEditor extends HTMLElement {
               <datalist id="plc-room-entities">
                 ${this._buildEntityDatalistOptions(["sensor", "device_tracker"])}
               </datalist>
-              <datalist id="plc-gps-entities">
+              <datalist id="plc-gl-entities">
                 ${this._buildEntityDatalistOptions(["device_tracker"])}
               </datalist>
             `
@@ -658,22 +682,22 @@ class PersonLocationCardEditor extends HTMLElement {
       field.addEventListener("blur", onCommit, true);
     });
 
-    const gpsPicker = this.shadowRoot.querySelector("[data-field='gps_entity']");
-    if (gpsPicker) {
-      if (gpsPicker.tagName === "HA-ENTITY-PICKER") {
-        gpsPicker.hass = this._hass;
-        gpsPicker.value = this._config.gps_entity || "";
-        gpsPicker.includeDomains = ["device_tracker"];
-        gpsPicker.addEventListener("value-changed", (ev) => {
-          this._updateConfig("gps_entity", ev.detail.value || "");
+    const glPicker = this.shadowRoot.querySelector("[data-field='gl_entity']");
+    if (glPicker) {
+      if (glPicker.tagName === "HA-ENTITY-PICKER") {
+        glPicker.hass = this._hass;
+        glPicker.value = this._config.gl_entity || "";
+        glPicker.includeDomains = ["device_tracker"];
+        glPicker.addEventListener("value-changed", (ev) => {
+          this._updateConfig("gl_entity", ev.detail.value || "");
         });
       } else {
-        gpsPicker.value = this._config.gps_entity || "";
+        glPicker.value = this._config.gl_entity || "";
         const onCommit = (ev) => {
-          this._updateConfig("gps_entity", ev.target.value || "");
+          this._updateConfig("gl_entity", ev.target.value || "");
         };
-        gpsPicker.addEventListener("change", onCommit);
-        gpsPicker.addEventListener("keydown", (ev) => {
+        glPicker.addEventListener("change", onCommit);
+        glPicker.addEventListener("keydown", (ev) => {
           if (ev.key !== "Enter") return;
           onCommit(ev);
         });
@@ -890,8 +914,8 @@ class PersonLocationCardEditor extends HTMLElement {
       this._updateDeviceEntry(idx, { entity: fieldEl.value || "" });
       return;
     }
-    if (fieldName === "gps_entity") {
-      this._updateConfig("gps_entity", fieldEl.value || "");
+    if (fieldName === "gl_entity") {
+      this._updateConfig("gl_entity", fieldEl.value || "");
       return;
     }
     this._updateConfig(fieldName, fieldEl.value);
@@ -970,7 +994,7 @@ class PersonLocationCardEditor extends HTMLElement {
       }
     } else {
       const shouldUnset =
-        (path === "area_attribute" || path === "gps_entity") && value === "";
+        (path === "area_attribute" || path === "gl_entity") && value === "";
       if (shouldUnset) {
         delete newConfig[path];
       } else {
