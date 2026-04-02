@@ -40,15 +40,6 @@ room_entities:
 gl_entity: device_tracker.alex_phone
 ```
 
-## Example (Single Room Entity)
-```yaml
-type: custom:person-room-card
-name: Alex
-room_entities:
-  - sensor.alex_phone_ble_area
-gl_entity: device_tracker.alex_phone
-```
-
 ## UI Configuration
 The card supports the Home Assistant visual editor. You can add and remove room entities, reorder them by drag-and-drop, and set a label for each device. Entity selection is limited to `sensor` and `device_tracker`. The general location entity uses `device_tracker` only.
 
