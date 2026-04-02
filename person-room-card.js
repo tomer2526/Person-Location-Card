@@ -16,9 +16,9 @@ class PersonRoomCard extends HTMLElement {
       throw new Error("Config is required");
     }
 
-    const roomEntities = config.room_entities || [];
-    if (!Array.isArray(roomEntities) || roomEntities.length === 0) {
-      throw new Error("room_entities must be a non-empty array of entity IDs");
+    const roomEntities = config.room_entities ?? [];
+    if (config.room_entities !== undefined && !Array.isArray(roomEntities)) {
+      throw new Error("room_entities must be an array of entity IDs");
     }
 
     this._config = {
@@ -315,10 +315,12 @@ class PersonLocationCardEditor extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._config = {};
     this._hass = null;
+    this._editorEntries = [];
   }
 
   setConfig(config) {
     this._config = config || {};
+    this._editorEntries = this._normalizeEntries(this._config);
     this._render();
   }
 
@@ -337,6 +339,17 @@ class PersonLocationCardEditor extends HTMLElement {
           flex-direction: column;
           gap: 12px;
         }
+        .devices {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .device-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr auto;
+          gap: 8px;
+          align-items: center;
+        }
         .hint {
           font-size: 12px;
           color: var(--secondary-text-color);
@@ -349,10 +362,13 @@ class PersonLocationCardEditor extends HTMLElement {
           data-field="name"
         ></ha-textfield>
 
-        <ha-entities-picker
-          label="Room entities"
-          data-field="room_entities"
-        ></ha-entities-picker>
+        <div class="devices">
+          ${this._renderDeviceRows()}
+          <mwc-button outlined data-action="add-device">Add device</mwc-button>
+          <div class="hint">
+            אפשר להגדיר שם לכל מכשיר. אם לא מוגדר, יוצג כברירת מחדל “מכשיר 1/2/3…”.
+          </div>
+        </div>
 
         <ha-entity-picker
           label="GPS entity"
@@ -419,21 +435,14 @@ class PersonLocationCardEditor extends HTMLElement {
           data-field="text.list"
         ></ha-textfield>
 
-        <div class="hint">
-          הערה: אם רוצים שמות מותאמים לכל מכשיר, אפשר להוסיף YAML עם label לכל entity.
-        </div>
       </div>
     `;
 
-    const roomPicker = this.shadowRoot.querySelector("[data-field='room_entities']");
-    if (roomPicker) {
-      roomPicker.hass = this._hass;
-      roomPicker.value = this._getRoomEntityIds();
-      roomPicker.addEventListener("value-changed", (ev) => {
-        const value = ev.detail.value || [];
-        this._updateConfig("room_entities", value);
-      });
-    }
+    const editorEntries = this._editorEntries.length > 0 ? this._editorEntries : [{ entity: "", label: "" }];
+
+    this.shadowRoot.querySelectorAll("ha-entity-picker").forEach((picker) => {
+      picker.hass = this._hass;
+    });
 
     const gpsPicker = this.shadowRoot.querySelector("[data-field='gps_entity']");
     if (gpsPicker) {
@@ -448,24 +457,117 @@ class PersonLocationCardEditor extends HTMLElement {
       field.addEventListener("input", (ev) => {
         const target = ev.target;
         const fieldName = target.dataset.field;
-        if (fieldName) {
-          this._updateConfig(fieldName, target.value);
-        }
+        if (!fieldName) return;
+        this._updateConfig(fieldName, target.value);
+      });
+    });
+
+    this.shadowRoot.querySelectorAll("[data-action='add-device']").forEach((btn) => {
+      btn.addEventListener("click", () => this._addDeviceRow());
+    });
+
+    this.shadowRoot.querySelectorAll("[data-action='remove-device']").forEach((btn) => {
+      btn.addEventListener("click", (ev) => {
+        const index = Number(ev.currentTarget.dataset.index);
+        this._removeDeviceRow(index);
+      });
+    });
+
+    this.shadowRoot.querySelectorAll("[data-field='device-entity']").forEach((picker) => {
+      const index = Number(picker.dataset.index);
+      picker.value = editorEntries[index]?.entity || "";
+      picker.addEventListener("value-changed", (ev) => {
+        const index = Number(ev.currentTarget.dataset.index);
+        const value = ev.detail.value || "";
+        this._updateDeviceEntry(index, { entity: value });
+      });
+    });
+
+    this.shadowRoot.querySelectorAll("[data-field='device-label']").forEach((field) => {
+      const index = Number(field.dataset.index);
+      field.value = editorEntries[index]?.label || "";
+      field.addEventListener("input", (ev) => {
+        const index = Number(ev.currentTarget.dataset.index);
+        const value = ev.target.value || "";
+        this._updateDeviceEntry(index, { label: value });
       });
     });
   }
 
-  _getRoomEntityIds() {
-    const entries = Array.isArray(this._config.room_entities)
-      ? this._config.room_entities
-      : [];
+  _renderDeviceRows() {
+    const entries = this._editorEntries.length > 0 ? this._editorEntries : [{ entity: "", label: "" }];
+    return entries
+      .map((entry, index) => {
+        return `
+          <div class="device-row">
+            <ha-entity-picker
+              label="Room entity"
+              data-field="device-entity"
+              data-index="${index}"
+              .value="${entry.entity || ""}"
+            ></ha-entity-picker>
+            <ha-textfield
+              label="Label"
+              data-field="device-label"
+              data-index="${index}"
+              .value="${entry.label || ""}"
+            ></ha-textfield>
+            <ha-icon-button
+              data-action="remove-device"
+              data-index="${index}"
+              title="Remove"
+              icon="mdi:close"
+            ></ha-icon-button>
+          </div>
+        `;
+      })
+      .join("");
+  }
+
+  _normalizeEntries(config) {
+    const entries = Array.isArray(config.room_entities) ? config.room_entities : [];
     return entries
       .map((item) => {
-        if (typeof item === "string") return item;
-        if (item && typeof item === "object") return item.entity;
+        if (typeof item === "string") return { entity: item, label: "" };
+        if (item && typeof item === "object") {
+          return { entity: item.entity || "", label: item.label || "" };
+        }
         return null;
       })
-      .filter((entity) => Boolean(entity));
+      .filter((entry) => Boolean(entry && entry.entity));
+  }
+
+  _addDeviceRow() {
+    this._editorEntries = [...this._editorEntries, { entity: "", label: "" }];
+    this._render();
+  }
+
+  _removeDeviceRow(index) {
+    this._editorEntries = this._editorEntries.filter((_, i) => i !== index);
+    if (this._editorEntries.length === 0) {
+      this._editorEntries = [{ entity: "", label: "" }];
+    }
+    this._commitRoomEntities();
+    this._render();
+  }
+
+  _updateDeviceEntry(index, patch) {
+    const entries = this._editorEntries.length > 0 ? [...this._editorEntries] : [{ entity: "", label: "" }];
+    const current = entries[index] || { entity: "", label: "" };
+    entries[index] = { ...current, ...patch };
+    this._editorEntries = entries;
+    this._commitRoomEntities();
+  }
+
+  _commitRoomEntities() {
+    const roomEntities = this._editorEntries
+      .filter((entry) => entry.entity)
+      .map((entry) => {
+        const label = (entry.label || "").trim();
+        if (label) return { entity: entry.entity, label };
+        return entry.entity;
+      });
+    this._updateConfig("room_entities", roomEntities);
   }
 
   _updateConfig(path, value) {
