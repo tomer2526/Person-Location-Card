@@ -53,6 +53,7 @@ The card supports the Home Assistant visual editor. You can add and remove room 
   - If set to a custom attribute and it does not exist, the room will be treated as unknown.
   - Dot paths are supported (e.g., `some.nested.attribute`).
 - `icon_home` / `icon_away` (string, optional): MDI icons for home/away. Use an empty string to hide the icon.
+- `dot_home_color` / `dot_away_color` / `dot_unavailable_color` (string, optional): Dot colors for home, away, and unavailable states. Accepts any CSS color value.
 - `text` (object, optional): Text overrides.
   - `away`: Text when not home
   - `same_room`: Text when everyone is in the same room (`{room}`, `{count}`). If `{room}` is missing, the card will append ` - {room}` automatically. If `same_room` is not set, the card falls back to `single` when everyone is in the same room.

@@ -26,6 +26,12 @@ class PersonRoomCard extends HTMLElement {
       room_entities: roomEntities,
       gl_entity: config.gl_entity || null,
       area_attribute: config.area_attribute || "area_name",
+      dot_home_color:
+        config.dot_home_color ?? "var(--success-color, #2e7d32)",
+      dot_away_color:
+        config.dot_away_color ?? "var(--warning-color, #ff9800)",
+      dot_unavailable_color:
+        config.dot_unavailable_color ?? "var(--disabled-text-color, #9e9e9e)",
       icon_home:
         config.icon_home === ""
           ? ""
@@ -165,7 +171,18 @@ class PersonRoomCard extends HTMLElement {
   _render() {
     if (!this._config || !this._hass || !this._elements) return;
 
-    const { name, room_entities, gl_entity, area_attribute, icon_home, icon_away, text } = this._config;
+    const {
+      name,
+      room_entities,
+      gl_entity,
+      area_attribute,
+      dot_home_color,
+      dot_away_color,
+      dot_unavailable_color,
+      icon_home,
+      icon_away,
+      text,
+    } = this._config;
 
     const roomEntities = room_entities.map((item, index) => {
       if (typeof item === "string") return { entity: item };
@@ -211,7 +228,7 @@ class PersonRoomCard extends HTMLElement {
 
       if (isUnavailable) {
         this._elements.statusDot.style.background =
-          "var(--disabled-text-color, #9e9e9e)";
+          dot_unavailable_color || "var(--disabled-text-color, #9e9e9e)";
         this._elements.statusDot.textContent = "?";
         this._elements.statusWrapper.setAttribute(
           "title",
@@ -220,8 +237,8 @@ class PersonRoomCard extends HTMLElement {
       } else {
         this._elements.statusDot.textContent = "";
         this._elements.statusDot.style.background = isHome
-          ? "var(--success-color, #2e7d32)"
-          : "var(--warning-color, #ff9800)";
+          ? dot_home_color || "var(--success-color, #2e7d32)"
+          : dot_away_color || "var(--warning-color, #ff9800)";
         const tooltipText = isHome ? "General location: at home" : "General location: away";
         this._elements.statusWrapper.setAttribute("title", tooltipText);
       }
@@ -614,6 +631,24 @@ class PersonLocationCardEditor extends HTMLElement {
         ></ha-textfield>
 
         <ha-textfield
+          label="Dot color: home"
+          value="${this._config.dot_home_color || ""}"
+          data-field="dot_home_color"
+        ></ha-textfield>
+
+        <ha-textfield
+          label="Dot color: away"
+          value="${this._config.dot_away_color || ""}"
+          data-field="dot_away_color"
+        ></ha-textfield>
+
+        <ha-textfield
+          label="Dot color: unavailable"
+          value="${this._config.dot_unavailable_color || ""}"
+          data-field="dot_unavailable_color"
+        ></ha-textfield>
+
+        <ha-textfield
           label="Text: away"
           value="${this._config.text?.away || ""}"
           data-field="text.away"
@@ -983,7 +1018,12 @@ class PersonLocationCardEditor extends HTMLElement {
       }
     } else {
       const shouldUnset =
-        (path === "area_attribute" || path === "gl_entity") && value === "";
+        (path === "area_attribute" ||
+          path === "gl_entity" ||
+          path === "dot_home_color" ||
+          path === "dot_away_color" ||
+          path === "dot_unavailable_color") &&
+        value === "";
       if (shouldUnset) {
         delete newConfig[path];
       } else {
