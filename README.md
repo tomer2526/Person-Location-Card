@@ -1,6 +1,16 @@
 # Person Location Card
 
 A Lovelace card that shows room-level presence from BLE entities and a general location home/away indicator.
+<table>
+  <tr>
+    <td>
+      <img width="422" height="303" alt="Screenshot 1" src="https://github.com/user-attachments/assets/c4637293-b627-4263-abd1-c9869ae5540b" />
+    </td>
+    <td>
+      <img width="400" height="377" alt="Screenshot 2" src="https://github.com/user-attachments/assets/083d196f-f9ac-453e-bf6f-81f4049cde7e" />
+    </td>
+  </tr>
+</table>
 
 ## Highlights
 - Unlimited room entities with per-device labels
