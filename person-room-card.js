@@ -318,6 +318,7 @@ class PersonLocationCardEditor extends HTMLElement {
     this._editorEntries = [];
     this._entriesKey = "";
     this._initialized = false;
+    this._hasRendered = false;
   }
 
   setConfig(config) {
@@ -340,11 +341,14 @@ class PersonLocationCardEditor extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
-    this._render();
+    if (!this._hasRendered) {
+      this._render();
+    }
   }
 
   _render() {
     if (!this.shadowRoot) return;
+    this._hasRendered = true;
 
     const devicePickerTag = this._getDevicePickerTag();
     const gpsPickerTag = this._getGpsPickerTag();
@@ -371,6 +375,32 @@ class PersonLocationCardEditor extends HTMLElement {
           grid-template-columns: 1fr 1fr auto;
           gap: 8px;
           align-items: center;
+        }
+        .add-device {
+          align-self: flex-start;
+          background: var(--primary-color);
+          color: var(--text-primary-color, #ffffff);
+          border: none;
+          border-radius: 6px;
+          padding: 8px 14px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+        }
+        .add-device:hover {
+          filter: brightness(1.05);
+        }
+        .remove-device {
+          border: none;
+          background: transparent;
+          color: var(--secondary-text-color);
+          font-size: 18px;
+          line-height: 1;
+          cursor: pointer;
+          padding: 6px;
+        }
+        .remove-device:hover {
+          color: var(--primary-text-color);
         }
         .device-entity {
           padding: 12px;
@@ -406,7 +436,7 @@ class PersonLocationCardEditor extends HTMLElement {
 
         <div class="devices">
           ${this._renderDeviceRows(devicePickerTag)}
-          <mwc-button outlined data-action="add-device">Add device</mwc-button>
+          <button class="add-device" type="button" data-action="add-device">Add device</button>
           <div class="hint">
             אפשר להגדיר שם לכל מכשיר. אם לא מוגדר, יוצג כברירת מחדל “מכשיר 1/2/3…”.
           </div>
@@ -505,13 +535,20 @@ class PersonLocationCardEditor extends HTMLElement {
     });
 
     const gpsPicker = this.shadowRoot.querySelector("[data-field='gps_entity']");
-    if (gpsPicker && gpsPicker.tagName === "HA-ENTITY-PICKER") {
-      gpsPicker.hass = this._hass;
-      gpsPicker.value = this._config.gps_entity || "";
-      gpsPicker.includeDomains = ["device_tracker"];
-      gpsPicker.addEventListener("value-changed", (ev) => {
-        this._updateConfig("gps_entity", ev.detail.value || "");
-      });
+    if (gpsPicker) {
+      if (gpsPicker.tagName === "HA-ENTITY-PICKER") {
+        gpsPicker.hass = this._hass;
+        gpsPicker.value = this._config.gps_entity || "";
+        gpsPicker.includeDomains = ["device_tracker"];
+        gpsPicker.addEventListener("value-changed", (ev) => {
+          this._updateConfig("gps_entity", ev.detail.value || "");
+        });
+      } else {
+        gpsPicker.value = this._config.gps_entity || "";
+        gpsPicker.addEventListener("input", (ev) => {
+          this._updateConfig("gps_entity", ev.target.value || "");
+        });
+      }
     }
 
     this.shadowRoot.querySelectorAll("[data-action='add-device']").forEach((btn) => {
@@ -594,12 +631,14 @@ class PersonLocationCardEditor extends HTMLElement {
               data-index="${index}"
               value="${entry.label || ""}"
             ></ha-textfield>
-            <ha-icon-button
+            <button
+              class="remove-device"
+              type="button"
               data-action="remove-device"
               data-index="${index}"
               title="Remove"
-              icon="mdi:close"
-            ></ha-icon-button>
+              aria-label="Remove"
+            >×</button>
           </div>
         `;
       })

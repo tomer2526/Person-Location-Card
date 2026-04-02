@@ -1,64 +1,64 @@
 # Person Location Card
 
-כרטיס Lovelace פשוט שמציג מיקום לפי חדר (BLE) ועדיין נותן אינדיקציה כללית לפי GPS (נקודה ירוקה/אפרה).
+A simple Lovelace card that shows room-level location (BLE) and a general GPS home/away indicator (green/gray dot).
 
-## התקנה דרך HACS (Dashboard / Plugin)
-1. הוסף את הריפו כ־Custom Repository ב־HACS עם Type = **Dashboard** (זה עדיין נקרא "plugin" בצד של HACS).
-2. התקן את הריפו מתוך HACS.
-3. הוסף את המשאב (Resources):
+## HACS Installation (Dashboard / Plugin)
+1. Add this repo as a Custom Repository in HACS with Type = **Dashboard** (it is still called a "plugin" in HACS).
+2. Install the repo from HACS.
+3. Add the resource (Resources):
    - URL: `/hacsfiles/person-room-card/person-room-card.js`
    - Type: `JavaScript Module`
 
-> הערה: ב־HACS הדרישה היא שקובץ ה־`.js` יהיה בשורש הריפו או ב־`dist/`, ושאחד הקבצים יהיה בשם זהה לריפו. לכן שם הריפו צריך להיות `person-room-card` (או שם שתואם לקובץ ה־JS).
+> Note: HACS expects the `.js` file to be in the repo root or in `dist/`, and at least one file must match the repo name. So the repo should be named `person-room-card` (or match the JS filename).
 
-## דוגמת שימוש
+## Example
 ```yaml
 type: custom:person-room-card
-name: תומר
+name: Alex
 room_entities:
-  - entity: sensor.private_ble_device_tomer_iphone16_pro_area
-    label: טלפון
-  - entity: sensor.tomer_apple_watch_private_ble_area
-    label: שעון
-  - entity: sensor.tomer_tablet_ble_area
-    label: טאבלט
-gps_entity: device_tracker.tomers_iphone
+  - entity: sensor.private_ble_device_alex_phone_area
+    label: Phone
+  - entity: sensor.alex_watch_ble_area
+    label: Watch
+  - entity: sensor.alex_tablet_ble_area
+    label: Tablet
+gps_entity: device_tracker.alex_phone
 tap_action:
   action: navigate
   navigation_path: >-
-    /history?entity_id=sensor.tomer_apple_watch_private_ble_area%2Csensor.private_ble_device_tomer_iphone16_pro_area%2Cdevice_tracker.tomers_iphone
+    /history?entity_id=sensor.alex_watch_ble_area%2Csensor.private_ble_device_alex_phone_area%2Cdevice_tracker.alex_phone
 ```
 
-## הגדרה דרך UI
-הכרטיס תומך בעורך הוויזואלי של Home Assistant, כולל הוספה/הסרה של ישויות (מוגבל ל־`sensor` ו־`device_tracker`), בחירת `gps_entity`, והגדרת שם לכל מכשיר. בעורך יוצג גם ה־`friendly_name` ליד ה־entity_id.
+## UI Configuration
+The card supports the Home Assistant visual editor, including adding/removing entities (restricted to `sensor` and `device_tracker`), selecting a `gps_entity`, and setting a label per device. The editor also shows each entity's `friendly_name` next to its entity ID.
 
-### דוגמה עם ישות חדר אחת בלבד
+### Single Room Entity Example
 ```yaml
 type: custom:person-room-card
-name: תומר
+name: Alex
 room_entities:
-  - sensor.private_ble_device_tomer_iphone16_pro_area
-gps_entity: device_tracker.tomers_iphone
+  - sensor.private_ble_device_alex_phone_area
+gps_entity: device_tracker.alex_phone
 ```
 
-## אפשרויות קונפיגורציה
-- `name` (string): שם שיופיע בכרטיס.
-- `room_entities` (array, חובה): כל כמות של ישויות שמחזירות חדר. אפשר לתת:
-  - מחרוזות של entity_id
-  - או אובייקטים עם `entity` ו־`label` (אם לא מוגדר, ברירת מחדל `מכשיר 1`, `מכשיר 2` וכו')
-- `gps_entity` (string, אופציונלי): ישות GPS (device_tracker) לנקודת מצב בבית/לא בבית.
-- `area_attribute` (string, ברירת מחדל `area_name`): שם האטריביוט שמכיל את שם החדר.
-- `icon_home` / `icon_away` (string): אייקונים ל־mdi כשהחדר קיים/לא קיים.
-- `text` (object): החלפת טקסטים. שדות אפשריים:
-  - `away`: טקסט כשלא בבית
-  - `same_room`: טקסט כשכולם באותו חדר (`{room}`, `{count}`)
-  - `both`: טקסט כשיש בדיוק שני מכשירים בחדרים שונים (`{label1}`, `{room1}`, `{label2}`, `{room2}`)
-  - `single`: טקסט כשיש רק חדר אחד (`{room}`, `{label}`)
-  - `item`: תבנית לפריט ברשימה (ברירת מחדל `{label}: {room}`)
-  - `separator`: מפריד בין פריטים (ברירת מחדל ` | `)
-  - `list`: תבנית לעטיפת הרשימה (משתמשת ב־`{items}`)
-- `tap_action` (object, אופציונלי): כרגע נתמך `action: navigate` עם `navigation_path`.
-  - אם לא מוגדר `tap_action`, לחיצה תפתח אוטומטית את דף ההיסטוריה של כל היישויות שהוגדרו (`room_entities` + `gps_entity` אם קיים).
+## Configuration Options
+- `name` (string): The display name.
+- `room_entities` (array, required): Any number of room-level entities. You can provide:
+  - entity_id strings
+  - or objects with `entity` and `label` (if not provided, defaults to `Device 1`, `Device 2`, etc.)
+- `gps_entity` (string, optional): GPS entity (device_tracker) for the home/away dot.
+- `area_attribute` (string, default `area_name`): Attribute that contains the room name.
+- `icon_home` / `icon_away` (string): MDI icons for home/away.
+- `text` (object): Text overrides. Available fields:
+  - `away`: Text when not home
+  - `same_room`: Text when everyone is in the same room (`{room}`, `{count}`)
+  - `both`: Text when exactly two devices are in different rooms (`{label1}`, `{room1}`, `{label2}`, `{room2}`)
+  - `single`: Text when only one room is detected (`{room}`, `{label}`)
+  - `item`: List item template (default `{label}: {room}`)
+  - `separator`: Separator between items (default ` | `)
+  - `list`: Wrapper template for the full list (uses `{items}`)
+- `tap_action` (object, optional): Currently supports `action: navigate` with `navigation_path`.
+  - If `tap_action` is not set, tapping opens the history page for all configured entities (`room_entities` + `gps_entity` if present).
 
 ## hacs.json
-בפרויקט הזה יש `hacs.json` בשורש הריפו עם `name`, `filename` ו־`render_readme`.
+This project includes `hacs.json` in the repo root with `name`, `filename`, and `render_readme`.
