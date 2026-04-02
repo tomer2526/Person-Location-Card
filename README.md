@@ -1,4 +1,4 @@
-# Person Room Card
+# Person Location Card
 
 כרטיס Lovelace פשוט שמציג מיקום לפי חדר (BLE) ועדיין נותן אינדיקציה כללית לפי GPS (נקודה ירוקה/אפרה).
 

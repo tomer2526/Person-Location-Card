@@ -64,7 +64,15 @@ class PersonRoomCard extends HTMLElement {
         justify-content: center;
         text-align: center;
         padding: 10px;
-        transition: all 0.3s ease;
+        transition: background-color 0.2s ease, box-shadow 0.2s ease;
+      }
+      ha-card:hover {
+        background-color: color-mix(in srgb, var(--card-background-color), #ffffff 8%);
+      }
+      @supports not (background-color: color-mix(in srgb, #000000, #ffffff)) {
+        ha-card:hover {
+          filter: brightness(1.04);
+        }
       }
       .icon {
         width: 42px;
@@ -295,6 +303,6 @@ customElements.define("person-room-card", PersonRoomCard);
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: "person-room-card",
-  name: "Person Room Card",
+  name: "Person Location Card",
   description: "Shows room-level BLE presence plus GPS home/away indicator.",
 });
