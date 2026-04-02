@@ -135,11 +135,18 @@ class PersonRoomCard extends HTMLElement {
     statusDot.className = "status-dot";
 
     const tooltipSupported = Boolean(customElements.get("ha-tooltip"));
-    const statusWrapper = tooltipSupported
-      ? document.createElement("ha-tooltip")
-      : document.createElement("div");
+    const statusWrapper = document.createElement("div");
     statusWrapper.className = "status-dot-wrapper";
-    statusWrapper.appendChild(statusDot);
+
+    let statusTooltip = null;
+    if (tooltipSupported) {
+      statusTooltip = document.createElement("ha-tooltip");
+      statusTooltip.className = "status-dot-tooltip";
+      statusTooltip.appendChild(statusDot);
+      statusWrapper.appendChild(statusTooltip);
+    } else {
+      statusWrapper.appendChild(statusDot);
+    }
 
     const iconWrapper = document.createElement("div");
     iconWrapper.className = "icon";
@@ -160,7 +167,16 @@ class PersonRoomCard extends HTMLElement {
     this.shadowRoot.appendChild(style);
     this.shadowRoot.appendChild(card);
 
-    this._elements = { card, statusWrapper, statusDot, iconWrapper, icon, name, label };
+    this._elements = {
+      card,
+      statusWrapper,
+      statusTooltip,
+      statusDot,
+      iconWrapper,
+      icon,
+      name,
+      label,
+    };
 
     card.addEventListener("click", () => this._handleTap());
   }
@@ -215,9 +231,9 @@ class PersonRoomCard extends HTMLElement {
       if (isUnavailable) {
         this._elements.statusDot.style.background = "rgba(0,0,0,0.25)";
         this._elements.statusDot.textContent = "?";
-        if (this._elements.statusWrapper.tagName === "HA-TOOLTIP") {
-          this._elements.statusWrapper.message = "General location status unavailable";
-          this._elements.statusWrapper.setAttribute("message", "General location status unavailable");
+        if (this._elements.statusTooltip) {
+          this._elements.statusTooltip.message = "General location status unavailable";
+          this._elements.statusTooltip.setAttribute("message", "General location status unavailable");
         } else {
           this._elements.statusWrapper.setAttribute("title", "General location status unavailable");
         }
@@ -227,9 +243,9 @@ class PersonRoomCard extends HTMLElement {
           ? "limegreen"
           : "var(--warning-color, orange)";
         const tooltipText = isHome ? "General location: at home" : "General location: away";
-        if (this._elements.statusWrapper.tagName === "HA-TOOLTIP") {
-          this._elements.statusWrapper.message = tooltipText;
-          this._elements.statusWrapper.setAttribute("message", tooltipText);
+        if (this._elements.statusTooltip) {
+          this._elements.statusTooltip.message = tooltipText;
+          this._elements.statusTooltip.setAttribute("message", tooltipText);
         } else {
           this._elements.statusWrapper.setAttribute("title", tooltipText);
         }
