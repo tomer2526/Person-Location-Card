@@ -435,6 +435,28 @@ class PersonLocationCardEditor extends HTMLElement {
           gap: 8px;
           align-items: center;
         }
+        .device-block {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+        .device-title {
+          font-weight: 600;
+          color: var(--primary-text-color);
+        }
+        .picker-col {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+        .picker-meta {
+          font-size: 12px;
+          color: var(--secondary-text-color);
+        }
+        .friendly-col {
+          font-size: 14px;
+          color: var(--primary-text-color);
+        }
         .entity-input {
           width: 100%;
           padding: 10px 12px;
@@ -487,26 +509,6 @@ class PersonLocationCardEditor extends HTMLElement {
         }
         .remove-device:hover {
           color: var(--primary-text-color);
-        }
-        .device-entity {
-          padding: 12px;
-          border-radius: 6px;
-          background: var(--secondary-background-color);
-          color: var(--primary-text-color);
-          font-size: 14px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-        .device-name {
-          font-weight: 600;
-        }
-        .device-id {
-          font-size: 12px;
-          color: var(--secondary-text-color);
         }
         .hint {
           font-size: 12px;
@@ -714,54 +716,54 @@ class PersonLocationCardEditor extends HTMLElement {
         const entityId = entry.entity;
         const friendlyName = entityId ? this._getFriendlyName(entityId) : "Select entity";
         return `
-          <div class="device-row" data-index="${index}">
-            <div class="device-entity" title="${this._escapeHtml(entityId || "")}">
-              <div class="device-name">${this._escapeHtml(friendlyName)}</div>
-              <div class="device-id">${this._escapeHtml(entityId || "")}</div>
+          <div class="device-block">
+            <div class="device-title">Device ${index + 1}</div>
+            <div class="device-row" data-index="${index}">
+              <button
+                class="remove-device"
+                type="button"
+                data-action="remove-device"
+                data-index="${index}"
+                title="Remove"
+                aria-label="Remove"
+              >×</button>
+              ${
+                supportsEntityPicker
+                  ? `
+                    <div class="picker-col">
+                      <ha-entity-picker
+                        label="Room entity"
+                        data-field="device-entity"
+                        data-index="${index}"
+                      ></ha-entity-picker>
+                      <div class="picker-meta">${this._escapeHtml(entityId ? `${friendlyName} (${entityId})` : "Select entity")}</div>
+                    </div>
+                  `
+                  : `
+                    <div class="picker-col">
+                      <input
+                        class="entity-input"
+                        list="plc-room-entities"
+                        data-field="device-entity"
+                        data-index="${index}"
+                        placeholder="sensor.example_room"
+                        value="${this._escapeHtml(entityId || "")}"
+                      />
+                      <div class="picker-meta">${this._escapeHtml(entityId ? `${friendlyName} (${entityId})` : "Select entity")}</div>
+                    </div>
+                  `
+              }
+              <div class="friendly-col">${this._escapeHtml(friendlyName || "-")}</div>
+              <button
+                class="drag-handle"
+                type="button"
+                data-action="drag-handle"
+                data-index="${index}"
+                draggable="true"
+                title="Drag to reorder"
+                aria-label="Drag to reorder"
+              >≡</button>
             </div>
-            <button
-              class="remove-device"
-              type="button"
-              data-action="remove-device"
-              data-index="${index}"
-              title="Remove"
-              aria-label="Remove"
-            >×</button>
-            ${
-              supportsEntityPicker
-                ? `
-                  <ha-entity-picker
-                    label="Room entity"
-                    data-field="device-entity"
-                    data-index="${index}"
-                  ></ha-entity-picker>
-                `
-                : `
-                  <input
-                    class="entity-input"
-                    list="plc-room-entities"
-                    data-field="device-entity"
-                    data-index="${index}"
-                    placeholder="sensor.example_room"
-                    value="${this._escapeHtml(entityId || "")}"
-                  />
-                `
-            }
-            <ha-textfield
-              label="Label"
-              data-field="device-label"
-              data-index="${index}"
-              value="${entry.label || ""}"
-            ></ha-textfield>
-            <button
-              class="drag-handle"
-              type="button"
-              data-action="drag-handle"
-              data-index="${index}"
-              draggable="true"
-              title="Drag to reorder"
-              aria-label="Drag to reorder"
-            >≡</button>
           </div>
         `;
       })
