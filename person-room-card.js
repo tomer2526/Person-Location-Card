@@ -346,21 +346,8 @@ class PersonLocationCardEditor extends HTMLElement {
   _render() {
     if (!this.shadowRoot) return;
 
-    const multiPickerTag = this._getMultiPickerTag();
-    const entitiesSelector = multiPickerTag === "ha-textfield"
-      ? `
-        <ha-textfield
-          label="Room entities"
-          data-field="room_entities"
-          placeholder="sensor.room_a, sensor.room_b"
-        ></ha-textfield>
-      `
-      : `
-        <${multiPickerTag}
-          label="Room entities"
-          data-field="room_entities"
-        ></${multiPickerTag}>
-      `;
+    const devicePickerTag = this._getDevicePickerTag();
+    const gpsPickerTag = this._getGpsPickerTag();
 
     this.shadowRoot.innerHTML = `
       <style>
@@ -381,7 +368,7 @@ class PersonLocationCardEditor extends HTMLElement {
         }
         .device-row {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: 1fr 1fr auto;
           gap: 8px;
           align-items: center;
         }
@@ -417,21 +404,29 @@ class PersonLocationCardEditor extends HTMLElement {
           data-field="name"
         ></ha-textfield>
 
-        ${entitiesSelector}
-
         <div class="devices">
-          <div class="labels">
-            ${this._renderLabelRows()}
-          </div>
+          ${this._renderDeviceRows(devicePickerTag)}
+          <mwc-button outlined data-action="add-device">Add device</mwc-button>
           <div class="hint">
             אפשר להגדיר שם לכל מכשיר. אם לא מוגדר, יוצג כברירת מחדל “מכשיר 1/2/3…”.
           </div>
         </div>
 
-        <ha-entity-picker
-          label="GPS entity (general location)"
-          data-field="gps_entity"
-        ></ha-entity-picker>
+        ${gpsPickerTag === "ha-textfield"
+          ? `
+            <ha-textfield
+              label="GPS entity (general location)"
+              data-field="gps_entity"
+              placeholder="device_tracker.person_phone"
+              value="${this._config.gps_entity || ""}"
+            ></ha-textfield>
+          `
+          : `
+            <${gpsPickerTag}
+              label="GPS entity (general location)"
+              data-field="gps_entity"
+            ></${gpsPickerTag}>
+          `}
 
         <ha-textfield
           label="Area attribute"
@@ -496,21 +491,9 @@ class PersonLocationCardEditor extends HTMLElement {
       </div>
     `;
 
-    const editorEntries = this._editorEntries;
-
     this.shadowRoot.querySelectorAll("ha-entity-picker").forEach((picker) => {
       picker.hass = this._hass;
     });
-
-    const gpsPicker = this.shadowRoot.querySelector("[data-field='gps_entity']");
-    if (gpsPicker) {
-      gpsPicker.hass = this._hass;
-      gpsPicker.value = this._config.gps_entity || "";
-      gpsPicker.includeDomains = ["device_tracker"];
-      gpsPicker.addEventListener("value-changed", (ev) => {
-        this._updateConfig("gps_entity", ev.detail.value || "");
-      });
-    }
 
     this.shadowRoot.querySelectorAll("ha-textfield").forEach((field) => {
       field.addEventListener("input", (ev) => {
@@ -521,57 +504,102 @@ class PersonLocationCardEditor extends HTMLElement {
       });
     });
 
-    const entitiesPicker = this.shadowRoot.querySelector("[data-field='room_entities']");
-    if (entitiesPicker) {
-      const current = editorEntries.map((entry) => entry.entity);
-      if (entitiesPicker.tagName === "HA-TEXTFIELD") {
-        entitiesPicker.value = current.join(", ");
-        entitiesPicker.addEventListener("input", (ev) => {
-          const value = (ev.target.value || "")
-            .split(",")
-            .map((entry) => entry.trim())
-            .filter((entry) => entry);
-          this._updateEntityList(value);
-        });
-      } else {
-        entitiesPicker.hass = this._hass;
-        entitiesPicker.value = current;
-        entitiesPicker.includeDomains = ["sensor", "device_tracker"];
-        entitiesPicker.addEventListener("value-changed", (ev) => {
-          const value = ev.detail.value || [];
-          this._updateEntityList(value);
-        });
-      }
+    const gpsPicker = this.shadowRoot.querySelector("[data-field='gps_entity']");
+    if (gpsPicker && gpsPicker.tagName === "HA-ENTITY-PICKER") {
+      gpsPicker.hass = this._hass;
+      gpsPicker.value = this._config.gps_entity || "";
+      gpsPicker.includeDomains = ["device_tracker"];
+      gpsPicker.addEventListener("value-changed", (ev) => {
+        this._updateConfig("gps_entity", ev.detail.value || "");
+      });
     }
 
+    this.shadowRoot.querySelectorAll("[data-action='add-device']").forEach((btn) => {
+      btn.addEventListener("click", () => this._addDeviceRow());
+    });
+
+    this.shadowRoot.querySelectorAll("[data-action='remove-device']").forEach((btn) => {
+      btn.addEventListener("click", (ev) => {
+        const index = Number(ev.currentTarget.dataset.index);
+        this._removeDeviceRow(index);
+      });
+    });
+
+    this.shadowRoot.querySelectorAll("[data-field='device-entity']").forEach((picker) => {
+      const index = Number(picker.dataset.index);
+      const value = this._editorEntries[index]?.entity || "";
+      if (picker.tagName === "HA-ENTITY-PICKER") {
+        picker.hass = this._hass;
+        picker.value = value;
+        picker.includeDomains = ["sensor", "device_tracker"];
+        picker.addEventListener("value-changed", (ev) => {
+          const idx = Number(ev.currentTarget.dataset.index);
+          const newValue = ev.detail.value || "";
+          this._updateDeviceEntry(idx, { entity: newValue });
+        });
+      } else {
+        picker.value = value;
+        picker.addEventListener("input", (ev) => {
+          const idx = Number(ev.currentTarget.dataset.index);
+          const newValue = ev.target.value || "";
+          this._updateDeviceEntry(idx, { entity: newValue });
+        });
+      }
+    });
+
     this.shadowRoot.querySelectorAll("[data-field='device-label']").forEach((field) => {
-      const entityId = field.dataset.entity;
+      const index = Number(field.dataset.index);
+      field.value = this._editorEntries[index]?.label || "";
       field.addEventListener("input", (ev) => {
+        const idx = Number(ev.currentTarget.dataset.index);
         const value = ev.target.value || "";
-        this._updateDeviceLabel(entityId, value);
+        this._updateDeviceEntry(idx, { label: value });
       });
     });
   }
 
-  _renderLabelRows() {
-    const entries = this._editorEntries;
+  _renderDeviceRows(pickerTag) {
+    const entries = this._editorEntries.length > 0 ? this._editorEntries : [{ entity: "", label: "" }];
     return entries
-      .filter((entry) => entry.entity)
-      .map((entry) => {
+      .map((entry, index) => {
         const entityId = entry.entity;
-        const friendlyName = this._getFriendlyName(entityId);
+        const friendlyName = entityId ? this._getFriendlyName(entityId) : "בחר ישות";
+        const entityField = pickerTag === "ha-textfield"
+          ? `
+            <ha-textfield
+              label="Room entity"
+              data-field="device-entity"
+              data-index="${index}"
+              placeholder="sensor.example_room"
+              value="${entityId || ""}"
+            ></ha-textfield>
+          `
+          : `
+            <${pickerTag}
+              label="Room entity"
+              data-field="device-entity"
+              data-index="${index}"
+            ></${pickerTag}>
+          `;
         return `
           <div class="device-row">
-            <div class="device-entity" title="${this._escapeHtml(entityId)}">
+            <div class="device-entity" title="${this._escapeHtml(entityId || "")}">
               <div class="device-name">${this._escapeHtml(friendlyName)}</div>
-              <div class="device-id">${this._escapeHtml(entityId)}</div>
+              <div class="device-id">${this._escapeHtml(entityId || "")}</div>
             </div>
+            ${entityField}
             <ha-textfield
               label="Label"
               data-field="device-label"
-              data-entity="${entityId}"
+              data-index="${index}"
               value="${entry.label || ""}"
             ></ha-textfield>
+            <ha-icon-button
+              data-action="remove-device"
+              data-index="${index}"
+              title="Remove"
+              icon="mdi:close"
+            ></ha-icon-button>
           </div>
         `;
       })
@@ -591,29 +619,35 @@ class PersonLocationCardEditor extends HTMLElement {
       .filter((entry) => Boolean(entry && entry.entity));
   }
 
-  _updateEntityList(entities) {
-    const prev = this._editorEntries;
-    this._editorEntries = entities.map((entity) => {
-      const existing = prev.find((entry) => entry.entity === entity);
-      return { entity, label: existing?.label || "" };
-    });
+  _addDeviceRow() {
+    this._editorEntries = [...this._editorEntries, { entity: "", label: "" }];
+    this._render();
+  }
+
+  _removeDeviceRow(index) {
+    this._editorEntries = this._editorEntries.filter((_, i) => i !== index);
+    if (this._editorEntries.length === 0) {
+      this._editorEntries = [{ entity: "", label: "" }];
+    }
     this._commitRoomEntities();
     this._render();
   }
 
-  _updateDeviceLabel(entityId, label) {
-    if (!entityId) return;
-    const entries = [...this._editorEntries];
-    const index = entries.findIndex((entry) => entry.entity === entityId);
-    if (index === -1) return;
-    entries[index] = { ...entries[index], label };
+  _updateDeviceEntry(index, patch) {
+    const entries = this._editorEntries.length > 0 ? [...this._editorEntries] : [{ entity: "", label: "" }];
+    const current = entries[index] || { entity: "", label: "" };
+    entries[index] = { ...current, ...patch };
     this._editorEntries = entries;
     this._commitRoomEntities();
   }
 
-  _getMultiPickerTag() {
-    if (customElements.get("ha-entities-picker")) return "ha-entities-picker";
-    if (customElements.get("ha-entity-multi-picker")) return "ha-entity-multi-picker";
+  _getDevicePickerTag() {
+    if (customElements.get("ha-entity-picker")) return "ha-entity-picker";
+    return "ha-textfield";
+  }
+
+  _getGpsPickerTag() {
+    if (customElements.get("ha-entity-picker")) return "ha-entity-picker";
     return "ha-textfield";
   }
 
