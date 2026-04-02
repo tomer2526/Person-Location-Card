@@ -177,7 +177,7 @@ class PersonRoomCard extends HTMLElement {
       this._elements.statusDot.style.display = "none";
     }
 
-    if (this._config.tap_action && this._config.tap_action.action) {
+    if (this._hasTapAction()) {
       this._elements.card.classList.add("clickable");
     } else {
       this._elements.card.classList.remove("clickable");
@@ -244,14 +244,49 @@ class PersonRoomCard extends HTMLElement {
 
   _handleTap() {
     const tap = this._config?.tap_action;
-    if (!tap || !tap.action) return;
-
-    if (tap.action === "navigate" && tap.navigation_path) {
-      const path = tap.navigation_path;
-      window.history.pushState(null, "", path);
-      window.dispatchEvent(new Event("location-changed"));
+    if (tap && tap.action) {
+      if (tap.action === "navigate" && tap.navigation_path) {
+        this._navigate(tap.navigation_path);
+      }
       return;
     }
+
+    const historyPath = this._buildHistoryPath();
+    if (historyPath) {
+      this._navigate(historyPath);
+    }
+  }
+
+  _navigate(path) {
+    window.history.pushState(null, "", path);
+    window.dispatchEvent(new Event("location-changed"));
+  }
+
+  _hasTapAction() {
+    const tap = this._config?.tap_action;
+    if (tap && tap.action) return true;
+    return Boolean(this._buildHistoryPath());
+  }
+
+  _buildHistoryPath() {
+    const roomEntities = Array.isArray(this._config?.room_entities)
+      ? this._config.room_entities
+      : [];
+    const entityIds = roomEntities
+      .map((item) => {
+        if (typeof item === "string") return item;
+        if (item && typeof item === "object") return item.entity;
+        return null;
+      })
+      .filter((entity) => Boolean(entity));
+
+    if (this._config?.gps_entity) {
+      entityIds.push(this._config.gps_entity);
+    }
+
+    if (entityIds.length === 0) return null;
+    const encoded = encodeURIComponent(entityIds.join(","));
+    return `/history?entity_id=${encoded}`;
   }
 }
 

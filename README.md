@@ -55,6 +55,7 @@ gps_entity: device_tracker.tomers_iphone
   - `separator`: מפריד בין פריטים (ברירת מחדל ` | `)
   - `list`: תבנית לעטיפת הרשימה (משתמשת ב־`{items}`)
 - `tap_action` (object, אופציונלי): כרגע נתמך `action: navigate` עם `navigation_path`.
+  - אם לא מוגדר `tap_action`, לחיצה תפתח אוטומטית את דף ההיסטוריה של כל היישויות שהוגדרו (`room_entities` + `gps_entity` אם קיים).
 
 ## hacs.json
 בפרויקט הזה יש `hacs.json` בשורש הריפו עם `name`, `filename` ו־`render_readme`.
