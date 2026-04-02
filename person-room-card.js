@@ -64,7 +64,7 @@ class PersonRoomCard extends HTMLElement {
         justify-content: center;
         text-align: center;
         padding: 10px;
-        transition: background-color 0s ease, box-shadow 0.2s ease;
+        transition: box-shadow 0.2s ease;
       }
       ha-card:hover {
         background-color: color-mix(in srgb, var(--card-background-color), #ffffff 8%);
