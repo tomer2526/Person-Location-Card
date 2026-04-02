@@ -29,6 +29,10 @@ tap_action:
     /history?entity_id=sensor.tomer_apple_watch_private_ble_area%2Csensor.private_ble_device_tomer_iphone16_pro_area%2Cdevice_tracker.tomers_iphone
 ```
 
+## הגדרה דרך UI
+הכרטיס תומך בעורך הוויזואלי של Home Assistant.  
+הערה: שמות מותאמים לכל מכשיר (label לכל entity) עדיין דורשים YAML ידני.
+
 ### דוגמה עם ישות חדר אחת בלבד
 ```yaml
 type: custom:person-room-card

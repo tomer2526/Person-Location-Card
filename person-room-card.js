@@ -308,3 +308,192 @@ window.customCards.push({
   name: "Person Location Card",
   description: "Shows room-level BLE presence plus GPS home/away indicator.",
 });
+
+class PersonLocationCardEditor extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this._config = {};
+    this._hass = null;
+  }
+
+  setConfig(config) {
+    this._config = config || {};
+    this._render();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    this._render();
+  }
+
+  _render() {
+    if (!this.shadowRoot) return;
+
+    this.shadowRoot.innerHTML = `
+      <style>
+        .form {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+        .hint {
+          font-size: 12px;
+          color: var(--secondary-text-color);
+        }
+      </style>
+      <div class="form">
+        <ha-textfield
+          label="Name"
+          .value="${this._config.name || ""}"
+          data-field="name"
+        ></ha-textfield>
+
+        <ha-entities-picker
+          label="Room entities"
+          data-field="room_entities"
+        ></ha-entities-picker>
+
+        <ha-entity-picker
+          label="GPS entity"
+          data-field="gps_entity"
+        ></ha-entity-picker>
+
+        <ha-textfield
+          label="Area attribute"
+          .value="${this._config.area_attribute || "area_name"}"
+          data-field="area_attribute"
+        ></ha-textfield>
+
+        <ha-textfield
+          label="Icon home"
+          .value="${this._config.icon_home || "mdi:home-account"}"
+          data-field="icon_home"
+        ></ha-textfield>
+
+        <ha-textfield
+          label="Icon away"
+          .value="${this._config.icon_away || "mdi:home-off"}"
+          data-field="icon_away"
+        ></ha-textfield>
+
+        <ha-textfield
+          label="Text: away"
+          .value="${this._config.text?.away || ""}"
+          data-field="text.away"
+        ></ha-textfield>
+
+        <ha-textfield
+          label="Text: same_room"
+          .value="${this._config.text?.same_room || ""}"
+          data-field="text.same_room"
+        ></ha-textfield>
+
+        <ha-textfield
+          label="Text: both"
+          .value="${this._config.text?.both || ""}"
+          data-field="text.both"
+        ></ha-textfield>
+
+        <ha-textfield
+          label="Text: single"
+          .value="${this._config.text?.single || ""}"
+          data-field="text.single"
+        ></ha-textfield>
+
+        <ha-textfield
+          label="Text: item"
+          .value="${this._config.text?.item || ""}"
+          data-field="text.item"
+        ></ha-textfield>
+
+        <ha-textfield
+          label="Text: separator"
+          .value="${this._config.text?.separator || ""}"
+          data-field="text.separator"
+        ></ha-textfield>
+
+        <ha-textfield
+          label="Text: list"
+          .value="${this._config.text?.list || ""}"
+          data-field="text.list"
+        ></ha-textfield>
+
+        <div class="hint">
+          הערה: אם רוצים שמות מותאמים לכל מכשיר, אפשר להוסיף YAML עם label לכל entity.
+        </div>
+      </div>
+    `;
+
+    const roomPicker = this.shadowRoot.querySelector("[data-field='room_entities']");
+    if (roomPicker) {
+      roomPicker.hass = this._hass;
+      roomPicker.value = this._getRoomEntityIds();
+      roomPicker.addEventListener("value-changed", (ev) => {
+        const value = ev.detail.value || [];
+        this._updateConfig("room_entities", value);
+      });
+    }
+
+    const gpsPicker = this.shadowRoot.querySelector("[data-field='gps_entity']");
+    if (gpsPicker) {
+      gpsPicker.hass = this._hass;
+      gpsPicker.value = this._config.gps_entity || "";
+      gpsPicker.addEventListener("value-changed", (ev) => {
+        this._updateConfig("gps_entity", ev.detail.value || "");
+      });
+    }
+
+    this.shadowRoot.querySelectorAll("ha-textfield").forEach((field) => {
+      field.addEventListener("input", (ev) => {
+        const target = ev.target;
+        const fieldName = target.dataset.field;
+        if (fieldName) {
+          this._updateConfig(fieldName, target.value);
+        }
+      });
+    });
+  }
+
+  _getRoomEntityIds() {
+    const entries = Array.isArray(this._config.room_entities)
+      ? this._config.room_entities
+      : [];
+    return entries
+      .map((item) => {
+        if (typeof item === "string") return item;
+        if (item && typeof item === "object") return item.entity;
+        return null;
+      })
+      .filter((entity) => Boolean(entity));
+  }
+
+  _updateConfig(path, value) {
+    const newConfig = { ...this._config };
+    if (path.startsWith("text.")) {
+      const key = path.split(".")[1];
+      newConfig.text = { ...(newConfig.text || {}), [key]: value };
+    } else {
+      newConfig[path] = value;
+    }
+    this._config = newConfig;
+    this.dispatchEvent(
+      new CustomEvent("config-changed", {
+        detail: { config: newConfig },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+}
+
+customElements.define("person-location-card-editor", PersonLocationCardEditor);
+
+PersonRoomCard.getConfigElement = () =>
+  document.createElement("person-location-card-editor");
+
+PersonRoomCard.getStubConfig = () => ({
+  type: "custom:person-room-card",
+  name: "Person",
+  room_entities: [],
+});
