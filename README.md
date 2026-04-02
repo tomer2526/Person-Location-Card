@@ -47,13 +47,16 @@ gps_entity: device_tracker.alex_phone
   - entity_id strings
   - or objects with `entity` and `label` (if not provided, defaults to `Device 1`, `Device 2`, etc.)
 - `gps_entity` (string, optional): GPS entity (device_tracker) for the home/away dot.
-- `area_attribute` (string, default `area_name`): Attribute that contains the room name.
+- `area_attribute` (string, default `area_name`): Attribute that contains the room name.  
+  - If set to `state`, the card will use the entity state.  
+  - If set to a custom attribute and it does not exist, the room will be treated as unknown.  
+  - Dot paths are supported (e.g., `some.nested.attribute`).
 - `icon_home` / `icon_away` (string): MDI icons for home/away.
 - `text` (object): Text overrides. Available fields:
   - `away`: Text when not home
-  - `same_room`: Text when everyone is in the same room (`{room}`, `{count}`). If `{room}` is missing, the card will append ` - {room}` automatically.
+  - `same_room`: Text when everyone is in the same room (`{room}`, `{count}`). If `{room}` is missing, the card will append ` - {room}` automatically. If `same_room` is not set, the card will fall back to `single` when everyone is in the same room.
   - `both`: Text when exactly two devices are in different rooms (`{label1}`, `{room1}`, `{label2}`, `{room2}`)
-  - `single`: Text when only one room is detected (`{room}`, `{label}`)
+  - `single`: Text when only one room is detected (`{room}`, `{label}`). If neither `{room}` nor `{label}` is included, the card will append ` - {room}` automatically.
   - `item`: List item template (default `{label}: {room}`)
   - `separator`: Separator between items (default ` | `)
   - `list`: Wrapper template for the full list (uses `{items}`)

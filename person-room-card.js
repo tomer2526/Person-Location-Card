@@ -218,10 +218,33 @@ class PersonRoomCard extends HTMLElement {
     if (!entityId || !this._hass) return null;
     const stateObj = this._hass.states[entityId];
     if (!stateObj) return null;
-    const attrValue = stateObj.attributes?.[areaAttribute];
-    const value = attrValue ?? stateObj.state;
-    if (!value || value === "unknown" || value === "unavailable") return null;
-    return value;
+    if (!areaAttribute || areaAttribute === "state") {
+      const value = stateObj.state;
+      if (!value || value === "unknown" || value === "unavailable") return null;
+      return value;
+    }
+
+    const attrValue = this._getAttributeValue(stateObj.attributes, areaAttribute);
+    if (attrValue !== undefined && attrValue !== null && attrValue !== "") {
+      return attrValue;
+    }
+
+    if (areaAttribute === "area_name") {
+      const value = stateObj.state;
+      if (!value || value === "unknown" || value === "unavailable") return null;
+      return value;
+    }
+
+    return null;
+  }
+
+  _getAttributeValue(attributes, path) {
+    if (!attributes || !path) return undefined;
+    if (!path.includes(".")) return attributes[path];
+    return path.split(".").reduce((acc, key) => {
+      if (acc && typeof acc === "object") return acc[key];
+      return undefined;
+    }, attributes);
   }
 
   _buildLabel({ present, text }) {
@@ -237,7 +260,10 @@ class PersonRoomCard extends HTMLElement {
 
     const allSameRoom = present.every((entry) => entry.room === present[0].room);
     if (present.length > 1 && allSameRoom) {
-      const sameTemplate = this._normalizeSameRoomTemplate(textSame);
+      const hasSameRoomCustom = Object.prototype.hasOwnProperty.call(text, "same_room");
+      const hasSingleCustom = Object.prototype.hasOwnProperty.call(text, "single");
+      const baseTemplate = !hasSameRoomCustom && hasSingleCustom ? textSingle : textSame;
+      const sameTemplate = this._normalizeSameRoomTemplate(baseTemplate);
       return this._replaceTokens(sameTemplate, {
         room: present[0].room,
         count: present.length,
@@ -245,7 +271,8 @@ class PersonRoomCard extends HTMLElement {
     }
 
     if (present.length === 1) {
-      return this._replaceTokens(textSingle, {
+      const singleTemplate = this._normalizeSingleTemplate(textSingle);
+      return this._replaceTokens(singleTemplate, {
         room: present[0].room,
         label: present[0].label,
       });
@@ -278,6 +305,11 @@ class PersonRoomCard extends HTMLElement {
 
   _normalizeSameRoomTemplate(template) {
     if (template.includes("{room}")) return template;
+    return `${template} - {room}`;
+  }
+
+  _normalizeSingleTemplate(template) {
+    if (template.includes("{room}") || template.includes("{label}")) return template;
     return `${template} - {room}`;
   }
 
