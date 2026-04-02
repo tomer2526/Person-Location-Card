@@ -20,6 +20,8 @@ room_entities:
     label: טלפון
   - entity: sensor.tomer_apple_watch_private_ble_area
     label: שעון
+  - entity: sensor.tomer_tablet_ble_area
+    label: טאבלט
 gps_entity: device_tracker.tomers_iphone
 tap_action:
   action: navigate
@@ -38,17 +40,20 @@ gps_entity: device_tracker.tomers_iphone
 
 ## אפשרויות קונפיגורציה
 - `name` (string): שם שיופיע בכרטיס.
-- `room_entities` (array, חובה): עד שתי ישויות שמחזירות חדר. אפשר לתת:
+- `room_entities` (array, חובה): כל כמות של ישויות שמחזירות חדר. אפשר לתת:
   - מחרוזות של entity_id
-  - או אובייקטים עם `entity` ו־`label`
+  - או אובייקטים עם `entity` ו־`label` (אם לא מוגדר, ברירת מחדל `מכשיר 1`, `מכשיר 2` וכו')
 - `gps_entity` (string, אופציונלי): ישות GPS (device_tracker) לנקודת מצב בבית/לא בבית.
 - `area_attribute` (string, ברירת מחדל `area_name`): שם האטריביוט שמכיל את שם החדר.
 - `icon_home` / `icon_away` (string): אייקונים ל־mdi כשהחדר קיים/לא קיים.
 - `text` (object): החלפת טקסטים. שדות אפשריים:
   - `away`: טקסט כשלא בבית
-  - `same_room`: טקסט כששני המכשירים באותו חדר (`{room}`)
-  - `both`: טקסט כשכל אחד בחדר אחר (`{label1}`, `{room1}`, `{label2}`, `{room2}`)
-  - `single`: טקסט כשיש רק חדר אחד (`{room}`)
+  - `same_room`: טקסט כשכולם באותו חדר (`{room}`, `{count}`)
+  - `both`: טקסט כשיש בדיוק שני מכשירים בחדרים שונים (`{label1}`, `{room1}`, `{label2}`, `{room2}`)
+  - `single`: טקסט כשיש רק חדר אחד (`{room}`, `{label}`)
+  - `item`: תבנית לפריט ברשימה (ברירת מחדל `{label}: {room}`)
+  - `separator`: מפריד בין פריטים (ברירת מחדל ` | `)
+  - `list`: תבנית לעטיפת הרשימה (משתמשת ב־`{items}`)
 - `tap_action` (object, אופציונלי): כרגע נתמך `action: navigate` עם `navigation_path`.
 
 ## hacs.json

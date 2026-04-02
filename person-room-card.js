@@ -18,7 +18,7 @@ class PersonRoomCard extends HTMLElement {
 
     const roomEntities = config.room_entities || [];
     if (!Array.isArray(roomEntities) || roomEntities.length === 0) {
-      throw new Error("room_entities must be an array with 1-2 entity IDs");
+      throw new Error("room_entities must be a non-empty array of entity IDs");
     }
 
     this._config = {
@@ -134,28 +134,25 @@ class PersonRoomCard extends HTMLElement {
 
     const { name, room_entities, gps_entity, area_attribute, icon_home, icon_away, text } = this._config;
 
-    const roomEntities = room_entities.slice(0, 2).map((item) => {
+    const roomEntities = room_entities.map((item, index) => {
       if (typeof item === "string") return { entity: item };
-      if (item && typeof item === "object") return { entity: item.entity, label: item.label };
+      if (item && typeof item === "object") {
+        return { entity: item.entity, label: item.label };
+      }
       return { entity: null };
     });
 
-    const roomNames = roomEntities.map((entry) => this._getAreaName(entry.entity, area_attribute));
+    const entries = roomEntities.map((entry, index) => {
+      const label = entry.label || `מכשיר ${index + 1}`;
+      const room = this._getAreaName(entry.entity, area_attribute);
+      return { entity: entry.entity, label, room };
+    });
 
-    const label1 = roomEntities[0]?.label || "מכשיר 1";
-    const label2 = roomEntities[1]?.label || "מכשיר 2";
-
-    const hasRoom1 = Boolean(roomNames[0]);
-    const hasRoom2 = Boolean(roomNames[1]);
-    const anyRoom = hasRoom1 || hasRoom2;
+    const present = entries.filter((entry) => Boolean(entry.room));
+    const anyRoom = present.length > 0;
 
     const labelText = this._buildLabel({
-      hasRoom1,
-      hasRoom2,
-      room1: roomNames[0],
-      room2: roomNames[1],
-      label1,
-      label2,
+      present,
       text,
     });
 
@@ -197,26 +194,46 @@ class PersonRoomCard extends HTMLElement {
     return value;
   }
 
-  _buildLabel({ hasRoom1, hasRoom2, room1, room2, label1, label2, text }) {
+  _buildLabel({ present, text }) {
     const textAway = text.away || "לא בבית";
     const textSame = text.same_room || "נמצא בחדר — {room}";
     const textBoth = text.both || "{label1}: {room1} | {label2}: {room2}";
     const textSingle = text.single || "נמצא בחדר — {room}";
+    const itemTemplate = text.item || "{label}: {room}";
+    const separator = text.separator || " | ";
+    const listTemplate = text.list || "{items}";
 
-    if (!hasRoom1 && !hasRoom2) return textAway;
-    if (hasRoom1 && hasRoom2 && room1 === room2) {
-      return this._replaceTokens(textSame, { room: room1 });
+    if (present.length === 0) return textAway;
+
+    const allSameRoom = present.every((entry) => entry.room === present[0].room);
+    if (present.length > 1 && allSameRoom) {
+      return this._replaceTokens(textSame, { room: present[0].room, count: present.length });
     }
-    if (hasRoom1 && hasRoom2) {
-      return this._replaceTokens(textBoth, {
-        label1,
-        label2,
-        room1,
-        room2,
+
+    if (present.length === 1) {
+      return this._replaceTokens(textSingle, {
+        room: present[0].room,
+        label: present[0].label,
       });
     }
-    if (hasRoom1) return this._replaceTokens(textSingle, { room: room1 });
-    return this._replaceTokens(textSingle, { room: room2 });
+
+    if (present.length === 2) {
+      return this._replaceTokens(textBoth, {
+        label1: present[0].label,
+        room1: present[0].room,
+        label2: present[1].label,
+        room2: present[1].room,
+      });
+    }
+
+    const items = present.map((entry) => {
+      return this._replaceTokens(itemTemplate, {
+        label: entry.label,
+        room: entry.room,
+      });
+    });
+
+    return this._replaceTokens(listTemplate, { items: items.join(separator) });
   }
 
   _replaceTokens(template, values) {
