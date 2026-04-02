@@ -26,8 +26,14 @@ class PersonRoomCard extends HTMLElement {
       room_entities: roomEntities,
       gps_entity: config.gps_entity || null,
       area_attribute: config.area_attribute || "area_name",
-      icon_home: config.icon_home || "mdi:home-account",
-      icon_away: config.icon_away || "mdi:home-off",
+      icon_home:
+        config.icon_home === ""
+          ? ""
+          : config.icon_home || "mdi:home-account",
+      icon_away:
+        config.icon_away === ""
+          ? ""
+          : config.icon_away || "mdi:home-off",
       tap_action: config.tap_action || null,
       text: config.text || {},
     };
@@ -140,7 +146,7 @@ class PersonRoomCard extends HTMLElement {
     this.shadowRoot.appendChild(style);
     this.shadowRoot.appendChild(card);
 
-    this._elements = { card, statusDot, icon, name, label };
+    this._elements = { card, statusDot, iconWrapper, icon, name, label };
 
     card.addEventListener("click", () => this._handleTap());
   }
@@ -175,8 +181,13 @@ class PersonRoomCard extends HTMLElement {
     const icon = anyRoom ? icon_home : icon_away;
     const iconColor = anyRoom ? "var(--primary-color)" : "rgba(0,0,0,0.3)";
 
-    this._elements.icon.setAttribute("icon", icon);
-    this._elements.icon.style.color = iconColor;
+    if (icon) {
+      this._elements.iconWrapper.style.display = "";
+      this._elements.icon.setAttribute("icon", icon);
+      this._elements.icon.style.color = iconColor;
+    } else {
+      this._elements.iconWrapper.style.display = "none";
+    }
     this._elements.name.textContent = name;
     this._elements.label.textContent = labelText;
 
@@ -571,13 +582,21 @@ class PersonLocationCardEditor extends HTMLElement {
 
         <ha-textfield
           label="Icon home"
-          value="${this._config.icon_home || "mdi:home-account"}"
+          value="${
+            this._config.icon_home === ""
+              ? ""
+              : this._config.icon_home || "mdi:home-account"
+          }"
           data-field="icon_home"
         ></ha-textfield>
 
         <ha-textfield
           label="Icon away"
-          value="${this._config.icon_away || "mdi:home-off"}"
+          value="${
+            this._config.icon_away === ""
+              ? ""
+              : this._config.icon_away || "mdi:home-off"
+          }"
           data-field="icon_away"
         ></ha-textfield>
 
@@ -951,11 +970,7 @@ class PersonLocationCardEditor extends HTMLElement {
       }
     } else {
       const shouldUnset =
-        (path === "icon_home" ||
-          path === "icon_away" ||
-          path === "area_attribute" ||
-          path === "gps_entity") &&
-        value === "";
+        (path === "area_attribute" || path === "gps_entity") && value === "";
       if (shouldUnset) {
         delete newConfig[path];
       } else {
