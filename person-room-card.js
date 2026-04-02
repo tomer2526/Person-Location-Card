@@ -410,6 +410,7 @@ class PersonLocationCardEditor extends HTMLElement {
   _render() {
     if (!this.shadowRoot) return;
     this._hasRendered = true;
+    const supportsEntityPicker = Boolean(customElements.get("ha-entity-picker"));
 
     this.shadowRoot.innerHTML = `
       <style>
