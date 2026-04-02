@@ -448,6 +448,7 @@ class PersonLocationCardEditor extends HTMLElement {
           display: flex;
           flex-direction: column;
           gap: 4px;
+          width: auto;
         }
         .picker-meta {
           font-size: 12px;
