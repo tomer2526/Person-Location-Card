@@ -430,26 +430,27 @@ class PersonLocationCardEditor extends HTMLElement {
         }
         .device-row {
           display: grid;
-          grid-template-columns: 1fr 1fr auto;
+          grid-template-columns: 1fr 1fr auto auto;
           gap: 8px;
           align-items: center;
         }
-        .move-buttons {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-        .move-button {
+        .drag-handle {
           border: none;
-          background: transparent;
+          background: var(--secondary-background-color);
           color: var(--secondary-text-color);
-          font-size: 14px;
+          font-size: 16px;
           cursor: pointer;
-          padding: 4px 6px;
+          padding: 6px 8px;
           line-height: 1;
+          border-radius: 6px;
+          user-select: none;
         }
-        .move-button:hover {
+        .drag-handle:hover {
           color: var(--primary-text-color);
+        }
+        .device-row.drag-over {
+          outline: 2px dashed var(--primary-color);
+          outline-offset: 2px;
         }
         .add-device {
           align-self: flex-start;
@@ -601,17 +602,29 @@ class PersonLocationCardEditor extends HTMLElement {
       });
     });
 
-    this.shadowRoot.querySelectorAll("[data-action='move-up']").forEach((btn) => {
-      btn.addEventListener("click", (ev) => {
-        const index = Number(ev.currentTarget.dataset.index);
-        this._moveDevice(index, -1);
+    this.shadowRoot.querySelectorAll(".device-row").forEach((row) => {
+      row.addEventListener("dragover", (ev) => {
+        ev.preventDefault();
+        row.classList.add("drag-over");
+      });
+      row.addEventListener("dragleave", () => {
+        row.classList.remove("drag-over");
+      });
+      row.addEventListener("drop", (ev) => {
+        ev.preventDefault();
+        row.classList.remove("drag-over");
+        const fromIndex = Number(ev.dataTransfer?.getData("text/plain"));
+        const toIndex = Number(row.dataset.index);
+        if (Number.isNaN(fromIndex) || Number.isNaN(toIndex)) return;
+        this._reorderDevices(fromIndex, toIndex);
       });
     });
 
-    this.shadowRoot.querySelectorAll("[data-action='move-down']").forEach((btn) => {
-      btn.addEventListener("click", (ev) => {
+    this.shadowRoot.querySelectorAll("[data-action='drag-handle']").forEach((handle) => {
+      handle.addEventListener("dragstart", (ev) => {
         const index = Number(ev.currentTarget.dataset.index);
-        this._moveDevice(index, 1);
+        ev.dataTransfer?.setData("text/plain", String(index));
+        ev.dataTransfer?.setDragImage(ev.currentTarget, 0, 0);
       });
     });
 
@@ -646,7 +659,7 @@ class PersonLocationCardEditor extends HTMLElement {
         const entityId = entry.entity;
         const friendlyName = entityId ? this._getFriendlyName(entityId) : "Select entity";
         return `
-          <div class="device-row">
+          <div class="device-row" data-index="${index}">
             <div class="device-entity" title="${this._escapeHtml(entityId || "")}">
               <div class="device-name">${this._escapeHtml(friendlyName)}</div>
               <div class="device-id">${this._escapeHtml(entityId || "")}</div>
@@ -662,32 +675,23 @@ class PersonLocationCardEditor extends HTMLElement {
               data-index="${index}"
               value="${entry.label || ""}"
             ></ha-textfield>
-            <div class="move-buttons">
-              <button
-                class="move-button"
-                type="button"
-                data-action="move-up"
-                data-index="${index}"
-                title="Move up"
-                aria-label="Move up"
-              >▲</button>
-              <button
-                class="move-button"
-                type="button"
-                data-action="move-down"
-                data-index="${index}"
-                title="Move down"
-                aria-label="Move down"
-              >▼</button>
-              <button
-                class="remove-device"
-                type="button"
-                data-action="remove-device"
-                data-index="${index}"
-                title="Remove"
-                aria-label="Remove"
-              >×</button>
-            </div>
+            <button
+              class="drag-handle"
+              type="button"
+              data-action="drag-handle"
+              data-index="${index}"
+              draggable="true"
+              title="Drag to reorder"
+              aria-label="Drag to reorder"
+            >≡</button>
+            <button
+              class="remove-device"
+              type="button"
+              data-action="remove-device"
+              data-index="${index}"
+              title="Remove"
+              aria-label="Remove"
+            >×</button>
           </div>
         `;
       })
@@ -721,13 +725,13 @@ class PersonLocationCardEditor extends HTMLElement {
     this._render();
   }
 
-  _moveDevice(index, delta) {
+  _reorderDevices(fromIndex, toIndex) {
+    if (fromIndex === toIndex) return;
     const entries = [...this._editorEntries];
-    const nextIndex = index + delta;
-    if (nextIndex < 0 || nextIndex >= entries.length) return;
-    const temp = entries[index];
-    entries[index] = entries[nextIndex];
-    entries[nextIndex] = temp;
+    if (fromIndex < 0 || toIndex < 0) return;
+    if (fromIndex >= entries.length || toIndex >= entries.length) return;
+    const [moved] = entries.splice(fromIndex, 1);
+    entries.splice(toIndex, 0, moved);
     this._editorEntries = entries;
     this._commitRoomEntities();
     this._render();
