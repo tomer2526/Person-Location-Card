@@ -21,12 +21,10 @@ class PersonRoomCard extends HTMLElement {
       throw new Error("room_entities must be an array of entity IDs");
     }
 
-    const glEntity = config.gl_entity ?? config.gps_entity ?? null;
-
     this._config = {
       name: config.name || "",
       room_entities: roomEntities,
-      gl_entity: glEntity || null,
+      gl_entity: config.gl_entity || null,
       area_attribute: config.area_attribute || "area_name",
       icon_home:
         config.icon_home === ""
