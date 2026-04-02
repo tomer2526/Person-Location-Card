@@ -430,9 +430,18 @@ class PersonLocationCardEditor extends HTMLElement {
         }
         .device-row {
           display: grid;
-          grid-template-columns: 1fr 1fr auto auto;
+          grid-template-columns: auto 1fr 1fr auto;
           gap: 8px;
           align-items: center;
+        }
+        .entity-input {
+          width: 100%;
+          padding: 10px 12px;
+          border-radius: 6px;
+          border: 1px solid var(--divider-color);
+          background: var(--card-background-color);
+          color: var(--primary-text-color);
+          font-size: 14px;
         }
         .drag-handle {
           border: none;
@@ -511,17 +520,34 @@ class PersonLocationCardEditor extends HTMLElement {
         ></ha-textfield>
 
         <div class="devices">
-          ${this._renderDeviceRows()}
+          ${this._renderDeviceRows(supportsEntityPicker)}
           <button class="add-device" type="button" data-action="add-device">Add device</button>
           <div class="hint">
             You can set a label for each device. If not set, the default is “Device 1/2/3…”.
           </div>
         </div>
 
-        <ha-entity-picker
-          label="GPS entity (general location)"
-          data-field="gps_entity"
-        ></ha-entity-picker>
+        ${
+          supportsEntityPicker
+            ? `
+              <ha-entity-picker
+                label="GPS entity (general location)"
+                data-field="gps_entity"
+              ></ha-entity-picker>
+            `
+            : `
+              <label>
+                <div class="hint">GPS entity (general location)</div>
+                <input
+                  class="entity-input"
+                  list="plc-gps-entities"
+                  data-field="gps_entity"
+                  placeholder="device_tracker.person_phone"
+                  value="${this._config.gps_entity || ""}"
+                />
+              </label>
+            `
+        }
 
         <ha-textfield
           label="Area attribute"
@@ -565,6 +591,18 @@ class PersonLocationCardEditor extends HTMLElement {
           data-field="text.separator"
         ></ha-textfield>
 
+        ${
+          supportsEntityPicker
+            ? ""
+            : `
+              <datalist id="plc-room-entities">
+                ${this._buildEntityDatalistOptions(["sensor", "device_tracker"])}
+              </datalist>
+              <datalist id="plc-gps-entities">
+                ${this._buildEntityDatalistOptions(["device_tracker"])}
+              </datalist>
+            `
+        }
       </div>
     `;
 
@@ -583,12 +621,19 @@ class PersonLocationCardEditor extends HTMLElement {
 
     const gpsPicker = this.shadowRoot.querySelector("[data-field='gps_entity']");
     if (gpsPicker) {
-      gpsPicker.hass = this._hass;
-      gpsPicker.value = this._config.gps_entity || "";
-      gpsPicker.includeDomains = ["device_tracker"];
-      gpsPicker.addEventListener("value-changed", (ev) => {
-        this._updateConfig("gps_entity", ev.detail.value || "");
-      });
+      if (gpsPicker.tagName === "HA-ENTITY-PICKER") {
+        gpsPicker.hass = this._hass;
+        gpsPicker.value = this._config.gps_entity || "";
+        gpsPicker.includeDomains = ["device_tracker"];
+        gpsPicker.addEventListener("value-changed", (ev) => {
+          this._updateConfig("gps_entity", ev.detail.value || "");
+        });
+      } else {
+        gpsPicker.value = this._config.gps_entity || "";
+        gpsPicker.addEventListener("change", (ev) => {
+          this._updateConfig("gps_entity", ev.target.value || "");
+        });
+      }
     }
 
     this.shadowRoot.querySelectorAll("[data-action='add-device']").forEach((btn) => {
@@ -631,14 +676,23 @@ class PersonLocationCardEditor extends HTMLElement {
     this.shadowRoot.querySelectorAll("[data-field='device-entity']").forEach((picker) => {
       const index = Number(picker.dataset.index);
       const value = this._editorEntries[index]?.entity || "";
-      picker.hass = this._hass;
-      picker.value = value;
-      picker.includeDomains = ["sensor", "device_tracker"];
-      picker.addEventListener("value-changed", (ev) => {
-        const idx = Number(ev.currentTarget.dataset.index);
-        const newValue = ev.detail.value || "";
-        this._updateDeviceEntry(idx, { entity: newValue });
-      });
+      if (picker.tagName === "HA-ENTITY-PICKER") {
+        picker.hass = this._hass;
+        picker.value = value;
+        picker.includeDomains = ["sensor", "device_tracker"];
+        picker.addEventListener("value-changed", (ev) => {
+          const idx = Number(ev.currentTarget.dataset.index);
+          const newValue = ev.detail.value || "";
+          this._updateDeviceEntry(idx, { entity: newValue });
+        });
+      } else {
+        picker.value = value;
+        picker.addEventListener("change", (ev) => {
+          const idx = Number(ev.currentTarget.dataset.index);
+          const newValue = ev.target.value || "";
+          this._updateDeviceEntry(idx, { entity: newValue });
+        });
+      }
     });
 
     this.shadowRoot.querySelectorAll("[data-field='device-label']").forEach((field) => {
@@ -652,7 +706,7 @@ class PersonLocationCardEditor extends HTMLElement {
     });
   }
 
-  _renderDeviceRows() {
+  _renderDeviceRows(supportsEntityPicker) {
     const entries = this._editorEntries.length > 0 ? this._editorEntries : [{ entity: "", label: "" }];
     return entries
       .map((entry, index) => {
@@ -664,11 +718,34 @@ class PersonLocationCardEditor extends HTMLElement {
               <div class="device-name">${this._escapeHtml(friendlyName)}</div>
               <div class="device-id">${this._escapeHtml(entityId || "")}</div>
             </div>
-            <ha-entity-picker
-              label="Room entity"
-              data-field="device-entity"
+            <button
+              class="remove-device"
+              type="button"
+              data-action="remove-device"
               data-index="${index}"
-            ></ha-entity-picker>
+              title="Remove"
+              aria-label="Remove"
+            >×</button>
+            ${
+              supportsEntityPicker
+                ? `
+                  <ha-entity-picker
+                    label="Room entity"
+                    data-field="device-entity"
+                    data-index="${index}"
+                  ></ha-entity-picker>
+                `
+                : `
+                  <input
+                    class="entity-input"
+                    list="plc-room-entities"
+                    data-field="device-entity"
+                    data-index="${index}"
+                    placeholder="sensor.example_room"
+                    value="${this._escapeHtml(entityId || "")}"
+                  />
+                `
+            }
             <ha-textfield
               label="Label"
               data-field="device-label"
@@ -684,14 +761,6 @@ class PersonLocationCardEditor extends HTMLElement {
               title="Drag to reorder"
               aria-label="Drag to reorder"
             >≡</button>
-            <button
-              class="remove-device"
-              type="button"
-              data-action="remove-device"
-              data-index="${index}"
-              title="Remove"
-              aria-label="Remove"
-            >×</button>
           </div>
         `;
       })
@@ -750,6 +819,22 @@ class PersonLocationCardEditor extends HTMLElement {
     return stateObj?.attributes?.friendly_name || entityId;
   }
 
+  _buildEntityDatalistOptions(domains) {
+    return this._getEntitiesByDomains(domains)
+      .map((entityId) => {
+        const name = this._getFriendlyName(entityId);
+        const label = `${name} (${entityId})`;
+        return `<option value="${this._escapeHtml(entityId)}">${this._escapeHtml(label)}</option>`;
+      })
+      .join("");
+  }
+
+  _getEntitiesByDomains(domains) {
+    if (!this._hass || !this._hass.states) return [];
+    return Object.keys(this._hass.states)
+      .filter((entityId) => domains.includes(entityId.split(".")[0]))
+      .sort((a, b) => a.localeCompare(b));
+  }
 
   _escapeHtml(value) {
     return String(value)
