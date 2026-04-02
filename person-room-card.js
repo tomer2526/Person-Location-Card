@@ -435,7 +435,7 @@ class PersonLocationCardEditor extends HTMLElement {
           gap: 8px;
           align-items: center;
         }
-        .entity-select {
+        .entity-input {
           width: 100%;
           padding: 10px 12px;
           border-radius: 6px;
@@ -521,9 +521,13 @@ class PersonLocationCardEditor extends HTMLElement {
             : `
               <label>
                 <div class="hint">GPS entity (general location)</div>
-                <select class="entity-select" data-field="gps_entity">
-                  ${this._buildEntityOptions(["device_tracker"], this._config.gps_entity || "")}
-                </select>
+                <input
+                  class="entity-input"
+                  list="plc-gps-entities"
+                  data-field="gps_entity"
+                  placeholder="device_tracker.person_phone"
+                  value="${this._config.gps_entity || ""}"
+                />
               </label>
             `
         }
@@ -570,6 +574,18 @@ class PersonLocationCardEditor extends HTMLElement {
           data-field="text.separator"
         ></ha-textfield>
 
+        ${
+          supportsEntityPicker
+            ? ""
+            : `
+              <datalist id="plc-room-entities">
+                ${this._buildEntityDatalistOptions(["sensor", "device_tracker"])}
+              </datalist>
+              <datalist id="plc-gps-entities">
+                ${this._buildEntityDatalistOptions(["device_tracker"])}
+              </datalist>
+            `
+        }
       </div>
     `;
 
@@ -597,7 +613,7 @@ class PersonLocationCardEditor extends HTMLElement {
         });
       } else {
         gpsPicker.value = this._config.gps_entity || "";
-        gpsPicker.addEventListener("change", (ev) => {
+        gpsPicker.addEventListener("input", (ev) => {
           this._updateConfig("gps_entity", ev.target.value || "");
         });
       }
@@ -628,7 +644,7 @@ class PersonLocationCardEditor extends HTMLElement {
         });
       } else {
         picker.value = value;
-        picker.addEventListener("change", (ev) => {
+        picker.addEventListener("input", (ev) => {
           const idx = Number(ev.currentTarget.dataset.index);
           const newValue = ev.target.value || "";
           this._updateDeviceEntry(idx, { entity: newValue });
@@ -669,9 +685,14 @@ class PersonLocationCardEditor extends HTMLElement {
                   ></ha-entity-picker>
                 `
                 : `
-                  <select class="entity-select" data-field="device-entity" data-index="${index}">
-                    ${this._buildEntityOptions(["sensor", "device_tracker"], entityId)}
-                  </select>
+                  <input
+                    class="entity-input"
+                    list="plc-room-entities"
+                    data-field="device-entity"
+                    data-index="${index}"
+                    placeholder="sensor.example_room"
+                    value="${this._escapeHtml(entityId || "")}"
+                  />
                 `
             }
             <ha-textfield
@@ -734,14 +755,14 @@ class PersonLocationCardEditor extends HTMLElement {
     return stateObj?.attributes?.friendly_name || entityId;
   }
 
-  _buildEntityOptions(domains, selected) {
-    const options = this._getEntitiesByDomains(domains).map((entityId) => {
-      const name = this._getFriendlyName(entityId);
-      const label = `${name} (${entityId})`;
-      const isSelected = entityId === selected ? "selected" : "";
-      return `<option value="${this._escapeHtml(entityId)}" ${isSelected}>${this._escapeHtml(label)}</option>`;
-    });
-    return [`<option value="">Select entity</option>`, ...options].join("");
+  _buildEntityDatalistOptions(domains) {
+    return this._getEntitiesByDomains(domains)
+      .map((entityId) => {
+        const name = this._getFriendlyName(entityId);
+        const label = `${name} (${entityId})`;
+        return `<option value="${this._escapeHtml(entityId)}">${this._escapeHtml(label)}</option>`;
+      })
+      .join("");
   }
 
   _getEntitiesByDomains(domains) {
