@@ -431,7 +431,7 @@ class PersonLocationCardEditor extends HTMLElement {
         }
         .device-row {
           display: grid;
-          grid-template-columns: auto 1fr auto;
+          grid-template-columns: auto 1fr 1fr auto;
           gap: 8px;
           align-items: center;
         }
@@ -749,6 +749,12 @@ class PersonLocationCardEditor extends HTMLElement {
                     </div>
                   `
               }
+              <ha-textfield
+                label="Label"
+                data-field="device-label"
+                data-index="${index}"
+                value="${entry.label || ""}"
+              ></ha-textfield>
               <button
                 class="drag-handle"
                 type="button"
